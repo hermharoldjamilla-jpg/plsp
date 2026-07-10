@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School Registration</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    background: #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: url('https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=1200&q=80');
+    background-size: cover;
+    background-position: center;
+  }
+
+  .page-wrapper {
+    display: flex;
+    width: 860px;
+    min-height: 600px;
+    border-radius: 24px;
+    overflow: hidden;
+    background: rgba(0,0,0,0.25);
+  }
+
+  /* LEFT PANEL */
+  .form-panel {
+    background: #2eaa4a;
+    width: 55%;
+    padding: 32px 28px;
+    border-radius: 24px;
+    position: relative;
+  }
+
+  .form-panel h2 {
+    color: #fff;
+    font-size: 17px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 3px;
+  }
+
+  .field label {
+    font-size: 11px;
+    color: #e8f5e9;
+    font-weight: 500;
+  }
+
+  .field input,
+  .field select {
+    background: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 12px;
+    color: #555;
+    outline: none;
+    width: 100%;
+  }
+
+  .field input::placeholder { color: #aaa; }
+
+  .field select {
+    appearance: none;
+    color: #aaa;
+  }
+
+  .section-label {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    margin: 12px 0 6px;
+  }
+
+  /* Student type radio buttons */
+  .type-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .type-option {
+    background: #fff;
+    border-radius: 7px;
+    padding: 7px 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    color: #444;
+    border: 2px solid transparent;
+    transition: border-color 0.15s;
+  }
+
+  .type-option input[type="radio"] { display: none; }
+
+  .type-option.selected {
+    border-color: #1a7a2e;
+    background: #e8f5e9;
+  }
+
+  .type-icon {
+    font-size: 15px;
+  }
+
+  /* Privacy text */
+  .privacy-box {
+    background: rgba(255,255,255,0.15);
+    border-radius: 7px;
+    padding: 8px 10px;
+    font-size: 10px;
+    color: #e0ffe0;
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+
+  .agree-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .agree-row input[type="checkbox"] { accent-color: #fff; width: 13px; height: 13px; }
+
+  .agree-row label {
+    font-size: 11px;
+    color: #e8f5e9;
+  }
+
+  .btn-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .btn-cancel {
+    background: transparent;
+    border: 1.5px solid #fff;
+    color: #fff;
+    border-radius: 6px;
+    padding: 7px 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .btn-cancel:hover { background: rgba(255,255,255,0.15); }
+
+  .btn-register {
+    background: #145c28;
+    border: none;
+    color: #fff;
+    border-radius: 6px;
+    padding: 7px 22px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s;
+  }
+
+  .btn-register:hover { background: #0e4520; }
+
+  /* RIGHT PANEL */
+  .hero-panel {
+    width: 45%;
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(6px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 32px;
+    text-align: center;
+    border-radius: 0 24px 24px 0;
+  }
+
+  .hero-panel h1 {
+    color: #1a6e2e;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 20px;
+  }
+
+  .hero-panel p {
+    color: #1a6e2e;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  /* OTP OVERLAY */
+  .otp-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .otp-overlay.active { display: flex; }
+
+  .otp-modal {
+    background: #fff;
+    border-radius: 18px;
+    padding: 40px 36px;
+    width: 380px;
+    text-align: center;
+    animation: popIn 0.25s ease;
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.88); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+  }
+
+  .otp-icon {
+    width: 56px;
+    height: 56px;
+    background: #e8f5e9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+  }
+
+  .otp-icon svg { width: 28px; height: 28px; color: #2eaa4a; }
+
+  .otp-modal h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+  }
+
+  .otp-modal p {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 28px;
+    line-height: 1.5;
+  }
+
+  .otp-inputs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .otp-inputs input {
+    width: 46px;
+    height: 54px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .otp-inputs input:focus {
+    border-color: #2eaa4a;
+  }
+
+  .btn-verify {
+    width: 100%;
+    background: #2eaa4a;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 14px;
+  }
+
+  .btn-verify:hover { background: #239039; }
+
+  .resend-text {
+    font-size: 12px;
+    color: #999;
+  }
+
+  .resend-text a {
+    color: #2eaa4a;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .resend-text a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- LEFT: Registration Form -->
+  <div class="form-panel">
+    <h2>Personal Information</h2>
+
+    <div class="row">
+      <div class="field">
+        <label>First Name</label>
+        <input type="text" placeholder="Enter First Name">
+      </div>
+      <div class="field">
+        <label>Middle</label>
+        <input type="text" placeholder="Enter Middle Name">
+      </div>
+      <div class="field">
+        <label>Last Name</label>
+        <input type="text" placeholder="Enter Last Name">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Student ID</label>
+        <input type="text" placeholder="Enter Your Student Number">
+      </div>
+      <div class="field">
+        <label>Date of Birth</label>
+        <input type="text" placeholder="mm/dd/yyyy">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Email Address</label>
+        <input type="email" placeholder="*****@gmail.com">
+      </div>
+      <div class="field">
+        <label>Mobile</label>
+        <input type="text" placeholder="09XXXXXXXXXX">
+      </div>
+    </div>
+
+    <div class="section-label">Academic</div>
+    <div class="row">
+      <div class="field">
+        <label>Course</label>
+        <select><option value="" disabled selected>Course</option><option>BSIT</option><option>BSCS</option><option>BSED</option></select>
+      </div>
+      <div class="field">
+        <label>Year Level</label>
+        <select><option value="" disabled selected>Year Level</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select>
+      </div>
+      <div class="field">
+        <label>Section</label>
+        <input type="text" placeholder="Section">
+      </div>
+    </div>
+
+    <div class="section-label">Student Type / Circumstance</div>
+    <div class="type-grid">
+      <label class="type-option" onclick="selectType(this)">
+        <input type="radio" name="stype" value="working">
+        <span class="type-icon">💼</span> Working Student
+      </label>
+      <label class="type-option" onclick="selectType(this)">
+        <input type="radio" name="stype" value="pwd">
+        <span class="type-icon">♿</span> PWD Student
+      </label>
+      <label class="type-option" onclick="selectType(this)">
+        <input type="radio" name="stype" value="solo">
+        <span class="type-icon">👨‍👧</span> Solo Parent Student
+      </label>
+      <label class="type-option" onclick="selectType(this)">
+        <input type="radio" name="stype" value="irregular">
+        <span class="type-icon">📋</span> Irregular Student
+      </label>
+    </div>
+
+    <div class="section-label">Account</div>
+    <div class="row">
+      <div class="field">
+        <label>Password</label>
+        <input type="password" placeholder="Password">
+      </div>
+      <div class="field">
+        <label>Confirm Password</label>
+        <input type="password" placeholder="Confirm Password">
+      </div>
+    </div>
+
+    <div class="privacy-box">
+      All personal information collected from students during the registration process will be handled with the highest level of confidentiality. The data will be used strictly for academic and administrative purposes within the institution. The school ensures that all information is securely stored and protected against unauthorized access, and will not be shared, disclosed, or distributed to any external parties, in accordance with the Data Privacy Act of 2012.
+    </div>
+
+    <div class="agree-row">
+      <input type="checkbox" id="agree">
+      <label for="agree">I agree to the Data Privacy Policy</label>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-cancel">Cancel</button>
+      <button class="btn-register" onclick="showOTP()">Register</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: Hero Panel -->
+  <div class="hero-panel">
+    <h1>Start your journey<br>with us.</h1>
+    <p>Register today and<br>become part of our<br>school community.</p>
+  </div>
+
+</div>
+
+<!-- OTP Overlay -->
+<div class="otp-overlay" id="otpOverlay">
+  <div class="otp-modal">
+    <div class="otp-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#2eaa4a">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+        <polyline points="22,6 12,13 2,6"/>
+      </svg>
+    </div>
+    <h3>Check your email</h3>
+    <p>We've sent a one-time password (OTP)<br>to your registered email address.</p>
+
+    <div class="otp-inputs">
+      <input type="text" maxlength="1" id="o1" oninput="otpNext(this,'o2')" onkeydown="otpBack(event,this,'')">
+      <input type="text" maxlength="1" id="o2" oninput="otpNext(this,'o3')" onkeydown="otpBack(event,this,'o1')">
+      <input type="text" maxlength="1" id="o3" oninput="otpNext(this,'o4')" onkeydown="otpBack(event,this,'o2')">
+      <input type="text" maxlength="1" id="o4" oninput="otpNext(this,'o5')" onkeydown="otpBack(event,this,'o3')">
+      <input type="text" maxlength="1" id="o5" oninput="otpNext(this,'o6')" onkeydown="otpBack(event,this,'o4')">
+      <input type="text" maxlength="1" id="o6" oninput="otpNext(this,'')"   onkeydown="otpBack(event,this,'o5')">
+    </div>
+
+    <button class="btn-verify" onclick="verifyOTP()">Verify OTP</button>
+    <p class="resend-text">Didn't receive a code? <a onclick="resendOTP()">Resend OTP</a></p>
+  </div>
+</div>
+
+<script>
+  function selectType(el) {
+    document.querySelectorAll('.type-option').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function showOTP() {
+    document.getElementById('otpOverlay').classList.add('active');
+    setTimeout(() => document.getElementById('o1').focus(), 100);
+  }
+
+  function otpNext(el, nextId) {
+    el.value = el.value.replace(/[^0-9]/g, '');
+    if (el.value && nextId) {
+      document.getElementById(nextId).focus();
+    }
+  }
+
+  function otpBack(e, el, prevId) {
+    if (e.key === 'Backspace' && !el.value && prevId) {
+      document.getElementById(prevId).focus();
+    }
+  }
+
+  function verifyOTP() {
+    const code = ['o1','o2','o3','o4','o5','o6'].map(id => document.getElementById(id).value).join('');
+    if (code.length === 6) {
+      alert('OTP Verified! Registration complete.');
+      document.getElementById('otpOverlay').classList.remove('active');
+    } else {
+      alert('Please enter all 6 digits.');
+    }
+  }
+
+  function resendOTP() {
+    alert('A new OTP has been sent to your email.');
+  }
+
+  document.getElementById('otpOverlay').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('active');
+  });
+</script>
+
+</body>
+</html>

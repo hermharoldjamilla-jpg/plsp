@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inbox – PLSP Student Support System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green-dark:#1a5c2a; --green-mid:#2e7d3f; --green-bright:#3a9e50; --green-light:#e8f5ec;
+    --gold:#f5c518; --text-primary:#1a1a1a; --text-muted:#6b7280; --border:#e5e7eb;
+    --white:#ffffff; --bg:#f4f6f5; --sidebar-w:220px;
+  }
+
+  /* ── Full-page shell — nothing scrolls except designated areas ── */
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Poppins', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+  }
+
+  .app-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Top bar — always visible, never scrolls ── */
+  .top-bar {
+    width: 100%;
+    height: 72px;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .top-bar img {
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: center 30%;
+  }
+  .top-bar::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,.18);
+  }
+
+  /* ── Main row fills remaining height ── */
+  .main-layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar — fixed, never scrolls with content ── */
+  .sidebar {
+    width: 220px;
+    background: #1a7a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0 0 16px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    height: 100%;
+  }
+
+  .sidebar-logo {
+    padding: 18px 0 10px;
+    display: flex;
+    justify-content: center;
+  }
+  .sidebar-logo img {
+    width: 64px; height: 64px;
+    object-fit: cover; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.35);
+    background: rgba(255,255,255,.08);
+    display: block;
+  }
+
+  .nav-list { list-style: none; width: 100%; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 22px;
+    color: rgba(255,255,255,0.82);
+    font-size: 13.5px; font-weight: 500;
+    cursor: pointer; transition: background .18s, color .18s;
+    border-left: 3px solid transparent;
+    text-decoration: none;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  .nav-item.active {
+    background: rgba(255,255,255,0.18); color: #fff;
+    border-left: 3px solid #fff; font-weight: 600;
+  }
+
+  .nav-icon {
+    font-size: 17px; width: 22px; text-align: center;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .nav-icon svg { width: 17px; height: 17px; }
+
+  .nav-submenu {
+    display: none; flex-direction: column;
+    list-style: none; background: rgba(0,0,0,.15);
+  }
+  .nav-submenu.open { display: flex; }
+  .nav-submenu .nav-item {
+    padding-left: 42px; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+
+  /* ── Right side: inbox content ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  /* ── Inbox page header ── */
+  .topbar {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .topbar-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px; color: var(--text-primary);
+  }
+
+  /* ── INBOX BODY ── */
+  .inbox-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    animation: fadeUp .35s ease both;
+  }
+
+  /* MESSAGE LIST PANEL */
+  .msg-panel {
+    width: 100%;
+    flex-shrink: 0;
+    background: var(--white);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width .25s ease;
+  }
+  .inbox-body.has-conv .msg-panel { width: 360px; }
+
+  .msg-panel-header { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); }
+  .compose-btn {
+    width: 100%; background: #1a7a1a; color: var(--white);
+    border: none; border-radius: 8px; padding: 10px 16px;
+    font-size: 13px; font-weight: 600; font-family: 'Poppins', sans-serif;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    gap: 8px; transition: background .15s;
+  }
+  .compose-btn:hover { background: #155f15; }
+
+  .search-row { display: flex; gap: 8px; margin-top: 12px; }
+  .search-wrap { flex: 1; position: relative; }
+  .search-wrap input {
+    width: 100%; padding: 8px 12px 8px 34px;
+    border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13px; font-family: 'Poppins', sans-serif;
+    color: var(--text-primary); background: var(--bg); outline: none; transition: border .15s;
+  }
+  .search-wrap input:focus { border-color: #1a7a1a; background: var(--white); }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+  .filter-btn {
+    width: 34px; height: 34px; border: 1px solid var(--border);
+    border-radius: 8px; background: var(--white); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted); flex-shrink: 0;
+  }
+
+  .tabs { display: flex; margin-top: 12px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 8px 12px; font-size: 13px; font-weight: 500;
+    color: var(--text-muted); cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    display: flex; align-items: center; gap: 6px; transition: all .15s;
+  }
+  .tab.active { color: #1a7a1a; border-bottom-color: #1a7a1a; font-weight: 600; }
+  .tab-count { background: #1a7a1a; color: var(--white); font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; }
+  .tab-count.grey { background: #e5e7eb; color: var(--text-muted); }
+
+  .msg-list { flex: 1; overflow-y: auto; }
+  .msg-list::-webkit-scrollbar { width: 4px; }
+  .msg-list::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
+
+  .msg-item {
+    padding: 14px 16px; border-bottom: 1px solid #f3f4f6;
+    cursor: pointer; display: flex; gap: 12px; align-items: flex-start;
+    transition: background .12s; position: relative;
+    user-select: none;
+  }
+  .msg-item:hover { background: #f9fafb; }
+  .msg-item.active { background: #f0fdf4; }
+
+  .msg-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .av-jd { background: #dcfce7; color: #166534; }
+  .av-ms { background: #fce7f3; color: #9d174d; }
+  .av-ar { background: #dbeafe; color: #1e40af; }
+  .av-lb { background: #ede9fe; color: #5b21b6; }
+  .av-pt { background: #fef9c3; color: #854d0e; }
+
+  .msg-content { flex: 1; min-width: 0; }
+  .msg-row1 { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+  .msg-name { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
+  .msg-time { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+  .msg-subject { font-size: 12.5px; font-weight: 500; color: var(--text-primary); margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+  .msg-preview { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .unread-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; flex-shrink: 0; margin-top: 2px; }
+
+  .load-more { padding: 14px; text-align: center; border-top: 1px solid var(--border); }
+  .load-more button {
+    background: none; border: none; font-size: 13px; color: var(--text-muted);
+    cursor: pointer; font-family: 'Poppins', sans-serif;
+    display: flex; align-items: center; gap: 6px; margin: 0 auto;
+  }
+  .load-more button:hover { color: #1a7a1a; }
+
+  /* CONVERSATION PANEL */
+  .conv-panel { flex: 1; display: none; flex-direction: column; overflow: hidden; background: var(--bg); }
+  .conv-panel.visible { display: flex; }
+
+  .conv-header {
+    background: var(--white); border-bottom: 1px solid var(--border);
+    padding: 14px 20px; display: flex; align-items: flex-start;
+    justify-content: space-between; flex-shrink: 0;
+  }
+  .conv-student { display: flex; align-items: center; gap: 12px; }
+  .conv-avatar { width: 44px; height: 44px; border-radius: 50%; background: #dcfce7; color: #166534; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+  .conv-name { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
+  .student-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: #dcfce7; color: #166534; }
+  .conv-email { font-size: 12px; color: var(--text-muted); }
+  .conv-meta { text-align: right; }
+  .meta-row { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+  .req-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: #fee2e2; color: #991b1b; }
+  .req-id { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+  .details-btn { border: 1px solid var(--border); background: var(--white); border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 500; font-family: 'Poppins', sans-serif; cursor: pointer; color: var(--text-primary); display: flex; align-items: center; gap: 6px; transition: background .15s; }
+  .details-btn:hover { background: var(--bg); }
+
+  /* MESSAGES */
+  .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
+
+  .bubble-wrap { display: flex; gap: 10px; align-items: flex-start; }
+  .bubble-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .bav-student { background: #dcfce7; color: #166534; }
+  .bav-admin { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; border: 2px solid var(--border); flex-shrink: 0; }
+  .bav-admin img { width: 100%; height: 100%; object-fit: cover; }
+  .bav-admin-fallback { width: 36px; height: 36px; border-radius: 50%; background: var(--green-light); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--green-dark); flex-shrink: 0; }
+
+  .bubble { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; flex: 1; max-width: 680px; }
+  .bubble.admin-bubble { background: #f0f7ff; border-color: #dbeafe; }
+  .bubble-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .bubble-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+  .bubble-time { font-size: 11px; color: var(--text-muted); }
+  .admin-tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: #dbeafe; color: #1e40af; }
+  .bubble-body { font-size: 13.5px; color: var(--text-primary); line-height: 1.65; }
+  .bubble-attachment { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+  .att-icon { color: #1a7a1a; }
+  .att-link { color: #1a7a1a; font-weight: 500; text-decoration: none; }
+  .att-link:hover { text-decoration: underline; }
+
+  /* REPLY BOX */
+  .reply-box { background: var(--white); border-top: 1px solid var(--border); padding: 16px 20px; flex-shrink: 0; }
+  .reply-tabs { display: flex; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .reply-tab { padding: 8px 14px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s; }
+  .reply-tab.active { color: #1a7a1a; border-bottom-color: #1a7a1a; font-weight: 600; }
+  .reply-textarea { width: 100%; min-height: 80px; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-size: 13.5px; font-family: 'Poppins', sans-serif; color: var(--text-primary); resize: vertical; outline: none; transition: border .15s; background: var(--bg); }
+  .reply-textarea:focus { border-color: #1a7a1a; background: var(--white); }
+  .reply-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+  .attach-btn { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 13px; font-family: 'Poppins', sans-serif; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; gap: 6px; transition: all .15s; }
+  .attach-btn:hover { background: var(--bg); color: var(--text-primary); }
+  .send-btn { background: #1a7a1a; color: var(--white); border: none; border-radius: 8px; padding: 9px 20px; font-size: 13px; font-weight: 600; font-family: 'Poppins', sans-serif; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background .15s; }
+  .send-btn:hover { background: #155f15; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- Top Bar — never scrolls -->
+  <div class="top-bar">
+    <img src="gate.jpg" alt="Dalubhasaan ng Lunsod ng San Pablo gate"/>
+  </div>
+
+  <div class="main-layout">
+
+    <!-- Sidebar — never scrolls with content -->
+    <aside class="sidebar">
+      <div class="sidebar-logo"><img src="logo.jpg" alt="PLSP Logo"></div>
+
+      <ul class="nav-list">
+        <li><a class="nav-item" href="dashboard.php">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+          </svg></span> Home
+        </a></li>
+
+        <li><a class="nav-item" href="students.php">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg></span> Students
+        </a></li>
+
+        <li><a class="nav-item" href="announcement.php">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/>
+          </svg></span> Announcement
+        </a></li>
+
+        <li><a class="nav-item active" href="inbox.php">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg></span> Inbox
+        </a></li>
+
+        <li>
+          <a class="nav-item" href="javascript:void(0)" onclick="toggleSubmenu(this)">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="8" r="4"/>
+              <path d="M4 20v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/>
+            </svg></span> Setting ▼
+          </a>
+          <ul class="nav-submenu">
+            <li><a class="nav-item" href="admin_profile.php">Profile</a></li>
+            <li><a class="nav-item" href="admin_usermanagement.php">User Management</a></li>
+            <li><a class="nav-item" href="admin_activitylog.php">Activity Log</a></li>
+          </ul>
+        </li>
+
+        <li><a class="nav-item" href="logout.php">
+          <span class="nav-icon">🚪</span> Logout
+        </a></li>
+      </ul>
+    </aside>
+
+    <!-- Main inbox area -->
+    <main class="main">
+      <div class="topbar">
+        <span class="topbar-title">Inbox</span>
+      </div>
+
+      <div class="inbox-body" id="inboxBody">
+
+        <!-- MESSAGE LIST -->
+        <div class="msg-panel">
+          <div class="msg-panel-header">
+            <button class="compose-btn">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              Compose Message
+            </button>
+            <div class="search-row">
+              <div class="search-wrap">
+                <svg class="search-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" placeholder="Search messages...">
+              </div>
+              <button class="filter-btn">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+              </button>
+            </div>
+            <div class="tabs">
+              <div class="tab active">All <span class="tab-count">12</span></div>
+              <div class="tab">Unread <span class="tab-count grey">3</span></div>
+              <div class="tab">Replied</div>
+            </div>
+          </div>
+
+          <div class="msg-list">
+                                                          <div class="msg-item active"
+                     data-id="REQ001"
+                     data-request='{&quot;id&quot;:&quot;REQ001&quot;,&quot;studentId&quot;:&quot;22-08639&quot;,&quot;student_name&quot;:&quot;Juan Dela Cruz&quot;,&quot;teachers_id&quot;:&quot;T-001&quot;,&quot;request_type&quot;:&quot;Blood Donation&quot;,&quot;description&quot;:&quot;Need 2 bags of O+ blood.&quot;,&quot;attachments&quot;:[&quot;medical_certificate.pdf&quot;,&quot;hospital_letter.pdf&quot;],&quot;status&quot;:&quot;Pending&quot;,&quot;request_date&quot;:&quot;2026-07-03T10:30:00Z&quot;,&quot;response_date&quot;:null,&quot;admin_remarks&quot;:&quot;&quot;}'>
+                  <div class="msg-avatar av-jd">JU</div>
+                  <div class="msg-content">
+                    <div class="msg-row1"><span class="msg-name">Juan Dela Cruz</span><span class="msg-time">Jul 3, 2026</span></div>
+                    <div class="msg-subject">Blood Donation · Pending</div>
+                    <div class="msg-preview">Need 2 bags of O+ blood. · 2 attachments</div>
+                  </div>
+                </div>
+                                              <div class="msg-item"
+                     data-id="6a474a79f1e20f1d00db0033"
+                     data-request='{&quot;id&quot;:&quot;6a474a79f1e20f1d00db0033&quot;,&quot;studentId&quot;:&quot;&quot;,&quot;student_name&quot;:&quot;&quot;,&quot;teachers_id&quot;:&quot;&quot;,&quot;request_type&quot;:&quot;&quot;,&quot;description&quot;:&quot;&quot;,&quot;attachments&quot;:[],&quot;status&quot;:&quot;pending&quot;,&quot;request_date&quot;:&quot;2026-07-03T05:36:57.059Z&quot;,&quot;response_date&quot;:null,&quot;admin_remarks&quot;:&quot;&quot;}'>
+                  <div class="msg-avatar av-jd"></div>
+                  <div class="msg-content">
+                    <div class="msg-row1"><span class="msg-name"></span><span class="msg-time">Jul 3, 2026</span></div>
+                    <div class="msg-subject"> · Pending</div>
+                    <div class="msg-preview"></div>
+                  </div>
+                </div>
+                                    </div>
+
+          <div class="load-more">
+            <button>
+              Load more messages
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- CONVERSATION PANEL -->
+        <div class="conv-panel" id="convPanel">
+          <div class="conv-header">
+            <div class="conv-student">
+              <div class="conv-avatar">JD</div>
+              <div>
+                <div class="conv-name">Juan Dela Cruz <span class="student-badge">Student</span></div>
+                <div class="conv-email">juan.delacruz@plsp.edu.ph</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="messages">
+            <div class="bubble-wrap">
+              <div class="bubble-avatar bav-student">JD</div>
+              <div class="bubble">
+                <div class="bubble-header">
+                  <span class="bubble-name">Juan Dela Cruz</span>
+                  <span class="bubble-time">May 30, 2024 10:30 AM</span>
+                </div>
+                <div class="bubble-body">
+                  Good day admin,<br><br>
+                  I would like to request for blood donation. My father is currently confined and needs 3 units of O+ blood. I am humbly asking for help from the school community.<br><br>
+                  Thank you very much.
+                </div>
+                <div class="bubble-attachment">
+                  <svg class="att-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                  <span>Attachments:</span>
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                  <a href="#" class="att-link">Medical Certificate.pdf</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="bubble-wrap">
+              <div class="bav-admin-fallback">AS</div>
+              <div class="bubble admin-bubble">
+                <div class="bubble-header">
+                  <span class="bubble-name">Admin Support</span>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="bubble-time">May 30, 2024 11:05 AM</span>
+                    <span class="admin-tag">Admin</span>
+                  </div>
+                </div>
+                <div class="bubble-body">
+                  Good day Juan,<br><br>
+                  We have received your request and it is now under review. We will post it on the announcement board for possible donors. We will notify you for any updates.<br><br>
+                  Stay safe!
+                </div>
+              </div>
+            </div>
+
+            <div class="bubble-wrap">
+              <div class="bubble-avatar bav-student">JD</div>
+              <div class="bubble">
+                <div class="bubble-header">
+                  <span class="bubble-name">Juan Dela Cruz</span>
+                  <span class="bubble-time">May 30, 2024 11:20 AM</span>
+                </div>
+                <div class="bubble-body">
+                  Thank you admin. I will wait for further updates.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="reply-box">
+            <div class="reply-tabs">
+              <div class="reply-tab active">Reply</div>
+              <div class="reply-tab">Note (Internal)</div>
+            </div>
+            <textarea class="reply-textarea" placeholder="Type your reply..."></textarea>
+            <div class="reply-actions">
+              <button class="attach-btn">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                Attach File
+              </button>
+              <button class="send-btn">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                Send Reply
+              </button>
+            </div>
+          </div>
+        </div><!-- /.conv-panel -->
+
+      </div><!-- /.inbox-body -->
+    </main>
+  </div><!-- /.main-layout -->
+</div><!-- /.app-wrapper -->
+
+<script>
+  const msgItems   = document.querySelectorAll('.msg-item');
+  const convPanel  = document.getElementById('convPanel');
+  const inboxBody  = document.getElementById('inboxBody');
+
+  // Track which item is currently open
+  let openItemId = null;
+
+  msgItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const id = item.dataset.id;
+
+      if (openItemId === id && convPanel.classList.contains('visible')) {
+        // Same item clicked again = double-click equivalent: hide panel
+        convPanel.classList.remove('visible');
+        inboxBody.classList.remove('has-conv');
+        item.classList.remove('active');
+        openItemId = null;
+      } else {
+        // Different item or panel was closed: open it
+        msgItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        inboxBody.classList.add('has-conv');
+        convPanel.classList.add('visible');
+        openItemId = id;
+      }
+    });
+  });
+
+  function toggleSubmenu(el) {
+    el.nextElementSibling.classList.toggle('open');
+  }
+</script>
+</body>
+</html>

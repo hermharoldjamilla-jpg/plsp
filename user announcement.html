@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SCAN TRACK – Announcements</title>
+
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+
+:root{
+  --green:#2e7d32;
+  --green-light:#43a047;
+  --bg:#eef2f3;
+  --text:#1c2b1e;
+  --muted:#6b7c6d;
+}
+
+body{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  background:linear-gradient(135deg,#eef2f3,#e3e9ec);
+}
+
+/* LAYOUT */
+.layout{display:flex;height:100vh;}
+
+/* SIDEBAR (IDENTICAL) */
+.sidebar{
+  width:170px;
+  background:linear-gradient(180deg,#2e7d32,#1b5e20);
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  padding:22px 0;
+  box-shadow:4px 0 20px rgba(0,0,0,0.2);
+  position:relative;
+}
+
+.sidebar-logo{
+  width:100%;
+  display:flex;
+  justify-content:center;
+  margin-bottom:24px;
+}
+.sidebar-logo img{
+  width:75px;height:75px;border-radius:50%;
+  object-fit:cover;
+  box-shadow:0 6px 14px rgba(0,0,0,0.25);
+  border:2px solid rgba(255,255,255,0.25);
+}
+
+/* NAV */
+.nav-item{
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px 22px;
+  color:rgba(255,255,255,0.75);
+  text-decoration:none;
+  font-size:0.85rem;
+  transition:.25s;
+  border-left:3px solid transparent;
+}
+.nav-item i{
+  font-size:18px;width:20px;text-align:center;
+}
+.nav-item:hover{
+  background:rgba(255,255,255,0.12);
+  color:#fff;
+  transform:translateX(3px);
+}
+.nav-item.active{
+  background:rgba(255,255,255,0.18);
+  color:#fff;
+  border-left:3px solid #a5d6a7;
+}
+
+/* HEADER */
+.header-banner{
+  height:72px;
+  background:
+  linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)),
+  url('gate.webp') center 30% / cover no-repeat;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.system-title{
+  color:#fff;
+  font-weight:800;
+  letter-spacing:1px;
+  font-size:1.2rem;
+}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;}
+.content{
+  padding:28px;
+  overflow-y:auto;
+}
+
+/* CARD (IDENTICAL GLASS) */
+.card{
+  background:rgba(255,255,255,0.7);
+  backdrop-filter:blur(10px);
+  border-radius:16px;
+  padding:22px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.08);
+  margin-bottom:20px;
+}
+
+/* SEARCH */
+.search-box{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:#fff;
+  padding:10px 14px;
+  border-radius:10px;
+  border:1px solid #ddd;
+  width:260px;
+  margin-bottom:15px;
+}
+
+/* TABS */
+.tabs{
+  display:flex;
+  gap:10px;
+}
+.tab{
+  padding:6px 16px;
+  background:#ddd;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:600;
+}
+.tab.active{
+  background:var(--green);
+  color:#fff;
+}
+
+/* ANNOUNCEMENT ITEMS (MATCH STYLE) */
+.announcement{
+  padding:14px;
+  border-radius:12px;
+  background:#fff;
+  border:1px solid #e0e3e0;
+  margin-bottom:10px;
+  transition:.2s;
+}
+.announcement:hover{
+  background:#e8f3ea;
+  transform:translateX(3px);
+}
+
+.title{
+  font-weight:700;
+  font-size:14px;
+}
+.meta{
+  font-size:11px;
+  color:var(--muted);
+}
+
+/* BADGE */
+.badge{
+  font-size:10px;
+  padding:3px 8px;
+  border-radius:10px;
+  margin-left:6px;
+}
+.new{background:#43a047;color:#fff;}
+.unread{background:#ff9800;color:#fff;}
+.recent{background:#2196f3;color:#fff;}
+
+</style>
+</head>
+
+<body>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <img src="logo.jpg">
+  </div>
+
+  <nav>
+    <a class="nav-item"><i class="ti ti-home"></i> Home</a>
+    <a class="nav-item"><i class="ti ti-file-text"></i> Requirements</a>
+    <a class="nav-item active"><i class="ti ti-bell"></i> Announcement</a>
+    <a class="nav-item"><i class="ti ti-headset"></i> Support</a>
+    <a class="nav-item" style="margin-top:20px;"><i class="ti ti-logout"></i> Logout</a>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+  <div class="header-banner">
+    <h2 class="system-title">SCAN TRACK SYSTEM</h2>
+  </div>
+
+  <div class="content">
+
+    <!-- SEARCH + FILTER -->
+    <div class="card">
+
+      <div class="search-box">
+        🔍 <input type="date" id="searchDate" onchange="filterDate()">
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="filterTab('all', this)">All</div>
+        <div class="tab" onclick="filterTab('new', this)">New</div>
+        <div class="tab" onclick="filterTab('unread', this)">Unread</div>
+        <div class="tab" onclick="filterTab('recent', this)">Recent</div>
+      </div>
+
+    </div>
+
+    <!-- ANNOUNCEMENTS -->
+    <div class="card">
+
+      <div class="announcement" data-type="new" data-date="2025-05-10">
+        <div class="title">Enrollment Reminder <span class="badge new">NEW</span></div>
+        <div class="meta">May 10, 2025</div>
+      </div>
+
+      <div class="announcement" data-type="unread" data-date="2025-05-08">
+        <div class="title">Scholarship Update <span class="badge unread">UNREAD</span></div>
+        <div class="meta">May 8, 2025</div>
+      </div>
+
+      <div class="announcement" data-type="recent" data-date="2025-05-05">
+        <div class="title">Class Suspension Notice <span class="badge recent">RECENT</span></div>
+        <div class="meta">May 5, 2025</div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+</div>
+
+<script>
+function filterTab(type, el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+
+  document.querySelectorAll('.announcement').forEach(a=>{
+    a.style.display = (type==='all'||a.dataset.type===type)?'block':'none';
+  });
+}
+
+function filterDate(){
+  const val=document.getElementById('searchDate').value;
+  document.querySelectorAll('.announcement').forEach(a=>{
+    a.style.display = (a.dataset.date===val)?'block':'none';
+  });
+}
+</script>
+
+</body>
+</html>

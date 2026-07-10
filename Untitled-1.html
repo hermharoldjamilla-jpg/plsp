@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PLSP – Support Request Detail</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:       #2e7d32;
+      --green-mid:   #388e3c;
+      --green-light: #43a047;
+      --sidebar-w:   200px;
+      --header-h:    90px;
+      --white:       #ffffff;
+      --bg:          #f0f2f4;
+      --text:        #1c2b1e;
+      --muted:       #6b7c6d;
+      --card-shadow: 0 2px 16px rgba(0,0,0,0.08);
+      --radius:      14px;
+    }
+
+    html, body { height: 100%; font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── Layout ── */
+    .layout { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: linear-gradient(175deg, #1b5e20 0%, #2e7d32 55%, #388e3c 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 0 20px;
+      flex-shrink: 0;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+      z-index: 10;
+    }
+
+    .sidebar-logo {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.92);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 32px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      overflow: hidden;
+    }
+    .sidebar-logo img { width: 56px; height: 56px; object-fit: contain; border-radius: 50%; }
+
+    nav { width: 100%; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 11px;
+      padding: 12px 22px;
+      color: rgba(255,255,255,0.78);
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .nav-item:hover { color: #fff; background: rgba(255,255,255,0.1); }
+    .nav-item.active {
+      color: #fff;
+      background: rgba(255,255,255,0.15);
+      border-left-color: #a5d6a7;
+      font-weight: 700;
+    }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .nav-item .chevron { margin-left: auto; width: 14px; height: 14px; }
+
+    .nav-dropdown-toggle { cursor: pointer; }
+
+    .nav-submenu {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      background: rgba(0,0,0,0.15);
+    }
+    .nav-submenu.open { max-height: 300px; }
+
+    .nav-sub-item {
+      display: block;
+      padding: 9px 20px 9px 52px;
+      color: rgba(255,255,255,0.7);
+      font-size: 0.82rem;
+      font-weight: 500;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all 0.18s;
+      position: relative;
+    }
+    .nav-sub-item::before { content: '•'; position: absolute; left: 36px; color: rgba(255,255,255,0.4); }
+    .nav-sub-item:hover { color: #fff; background: rgba(255,255,255,0.08); border-left-color: #a5d6a7; }
+
+    /* ── Main ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    .header-banner {
+      height: var(--header-h);
+      background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('gate.webp') center/cover no-repeat;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .header-banner h2 {
+      font-size: 1.5rem; font-weight: 800; color: #fff;
+      letter-spacing: 0.08em; text-shadow: 0 2px 10px rgba(0,0,0,0.5); text-transform: uppercase;
+    }
+
+    /* ── Content ── */
+    .content { flex: 1; overflow-y: auto; padding: 24px 28px; }
+
+    .page-title { font-size: 1.2rem; font-weight: 800; color: var(--text); margin-bottom: 16px; }
+
+    /* ── Outer Card ── */
+    .outer-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--card-shadow);
+      border: 1px solid rgba(0,0,0,0.06);
+      padding: 18px;
+      animation: fadeUp 0.4s both;
+    }
+
+    /* ── Search ── */
+    .search-wrap { margin-bottom: 12px; }
+    .search-box {
+      display: flex; align-items: center;
+      background: var(--white);
+      border: 1.5px solid #d0d5d1;
+      border-radius: 50px;
+      padding: 8px 16px; gap: 8px; width: 100%;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-box:focus-within { border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+    .search-box input {
+      border: none; outline: none;
+      font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.85rem;
+      color: var(--text); background: transparent; flex: 1;
+    }
+    .search-box input::placeholder { color: #aaa; }
+    .search-box svg { color: #888; width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* ── Tabs ── */
+    .tabs-row {
+      display: flex; gap: 0;
+      margin-bottom: 14px;
+      border-bottom: 2px solid #e0e3e0;
+    }
+    .tab-btn {
+      padding: 8px 22px;
+      background: none;
+      border: none;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.85rem; font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.18s;
+    }
+    .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
+    /* ── Two-column layout ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1.6fr; gap: 14px; }
+
+    /* ── Left: Request List ── */
+    .list-panel {
+      background: #e8ebe8;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .request-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
+      background: #e8ebe8;
+      border-bottom: 1px solid #d8dbd8;
+      cursor: pointer;
+      transition: background 0.18s;
+    }
+    .request-item:last-child { border-bottom: none; }
+    .request-item:hover, .request-item.active { background: #dde0dd; }
+
+    .avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: #c8cbc8; flex-shrink: 0; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .avatar svg { color: #999; width: 20px; height: 20px; }
+
+    .item-info { flex: 1; min-width: 0; }
+    .item-name { font-size: 0.85rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .item-email { font-size: 0.72rem; color: var(--muted); margin-bottom: 1px; }
+    .item-label { font-size: 0.72rem; color: var(--muted); }
+
+    /* empty items */
+    .request-item.empty .item-name { color: #666; }
+
+    /* ── Right: Detail Panel ── */
+    .detail-panel {
+      background: #f4f6f4;
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Student info row */
+    .student-row {
+      display: flex; align-items: flex-start; gap: 14px;
+    }
+
+    .student-avatar {
+      width: 54px; height: 54px; border-radius: 50%;
+      background: #c8cbc8; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .student-avatar svg { color: #999; width: 26px; height: 26px; }
+
+    .student-info { flex: 1; }
+    .student-name { font-size: 0.95rem; font-weight: 800; color: var(--text); margin-bottom: 2px; }
+    .student-course { font-size: 0.75rem; color: var(--green); font-weight: 600; margin-bottom: 6px; }
+    .student-contacts { display: flex; flex-direction: column; gap: 3px; }
+    .contact-row { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--muted); }
+    .contact-row svg { width: 13px; height: 13px; flex-shrink: 0; color: #888; }
+
+    .date-block { text-align: right; flex-shrink: 0; }
+    .date-label { font-size: 0.68rem; color: var(--muted); font-weight: 600; margin-bottom: 3px; }
+    .date-value { font-size: 0.78rem; font-weight: 700; color: var(--text); }
+    .time-value { font-size: 0.72rem; color: var(--muted); }
+
+    /* Divider */
+    .divider { height: 1px; background: #dde0dd; }
+
+    /* Fields */
+    .field-row {
+      display: flex; align-items: flex-start; gap: 8px; font-size: 0.82rem;
+    }
+    .field-label {
+      font-weight: 700; color: var(--text);
+      min-width: 110px; flex-shrink: 0;
+    }
+    .field-sep { color: var(--muted); flex-shrink: 0; }
+    .field-value { color: var(--text); line-height: 1.5; }
+
+    /* Attachment */
+    .attachment-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--white); border: 1.5px solid #d0d5d1;
+      border-radius: 8px; padding: 5px 12px;
+      font-size: 0.78rem; font-weight: 600; color: var(--text);
+      cursor: pointer; transition: border-color 0.18s;
+    }
+    .attachment-chip:hover { border-color: var(--green-light); }
+    .attachment-chip svg { width: 14px; height: 14px; color: var(--green); }
+
+    /* Response textarea */
+    .response-area {
+      width: 100%;
+      min-height: 80px;
+      background: var(--white);
+      border: 1.5px solid #d0d5d1;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.82rem;
+      color: var(--text);
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .response-area::placeholder { color: #bbb; }
+    .response-area:focus { border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.12); }
+
+    /* Send button */
+    .send-row { display: flex; justify-content: flex-end; }
+    .btn-send {
+      background: linear-gradient(135deg, var(--green-light), var(--green));
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 28px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.85rem; font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 3px 12px rgba(46,125,50,0.35);
+      transition: transform 0.18s, box-shadow 0.18s, filter 0.18s;
+    }
+    .btn-send:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(46,125,50,0.45); filter: brightness(1.06); }
+    .btn-send:active { transform: translateY(0); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="logo.jpg" alt="PLSP Logo"/>
+    </div>
+    <nav>
+      <a class="nav-item" href="plsp-dashboard.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <div class="nav-item nav-dropdown-toggle" onclick="toggleStudents(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Students
+        <svg class="chevron" id="students-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform 0.25s"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+      <div class="nav-submenu" id="students-submenu">
+        <a class="nav-sub-item" href="#">Solo Parent</a>
+        <a class="nav-sub-item" href="#">PWD</a>
+        <a class="nav-sub-item" href="#">Working Student</a>
+        <a class="nav-sub-item" href="#">Irregular Student</a>
+        <a class="nav-sub-item" href="#">PHC</a>
+      </div>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Requirements
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Announcement
+      </a>
+      <a class="nav-item active" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Inbox
+      </a>
+      <div class="nav-item nav-dropdown-toggle" onclick="toggleSettings(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+        Settings
+        <svg class="chevron" id="settings-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform 0.25s"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+      <div class="nav-submenu" id="settings-submenu">
+        <a class="nav-sub-item" href="#">Profile</a>
+        <a class="nav-sub-item" href="#">User Management</a>
+        <a class="nav-sub-item" href="#">Activity Log</a>
+      </div>
+      <a class="nav-item" href="#" style="margin-top:12px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="header-banner">
+      <h2>Dalubhasaan ng Lunsod ng San Pablo</h2>
+    </div>
+
+    <div class="content">
+      <div class="page-title">Support Request</div>
+
+      <div class="outer-card">
+        <!-- Search -->
+        <div class="search-wrap">
+          <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search Name" oninput="filterRequests()"/>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs-row">
+          <button class="tab-btn active">Request List</button>
+          <button class="tab-btn">Request Details</button>
+        </div>
+
+        <!-- Two-column -->
+        <div class="two-col">
+
+          <!-- Left List -->
+          <div class="list-panel" id="requestList">
+
+            <div class="request-item active" onclick="selectItem(this)">
+              <div class="avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div class="item-info">
+                <div class="item-name">Cardo</div>
+                <div class="item-email">cardo@gmail.com</div>
+                <div class="item-label">Schedule Adjustment...</div>
+              </div>
+            </div>
+
+            <div class="request-item" onclick="selectItem(this)">
+              <div class="avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div class="item-info">
+                <div class="item-name">Cardo</div>
+              </div>
+            </div>
+
+            <div class="request-item empty" onclick="selectItem(this)">
+              <div class="avatar"></div>
+              <div class="item-info"><div class="item-name"></div></div>
+            </div>
+
+            <div class="request-item empty" onclick="selectItem(this)">
+              <div class="avatar"></div>
+              <div class="item-info"><div class="item-name"></div></div>
+            </div>
+
+            <div class="request-item empty" onclick="selectItem(this)">
+              <div class="avatar"></div>
+              <div class="item-info"><div class="item-name"></div></div>
+            </div>
+
+          </div>
+
+          <!-- Right Detail -->
+          <div class="detail-panel">
+
+            <!-- Student header -->
+            <div class="student-row">
+              <div class="student-avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div class="student-info">
+                <div class="student-name">Pedro Penduko</div>
+                <div class="student-course">Working Student</div>
+                <div class="student-contacts">
+                  <div class="contact-row">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    cbxzhcbdv@gmail.com
+                  </div>
+                  <div class="contact-row">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.75 3.4 2 2 0 0 1 3.74 1.25h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    09XXXXXXXXX
+                  </div>
+                </div>
+              </div>
+              <div class="date-block">
+                <div class="date-label">Date Submitted</div>
+                <div class="date-value">May 10, 2025</div>
+                <div class="time-value">10:30 PM</div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Fields -->
+            <div class="field-row">
+              <span class="field-label">Request Type</span>
+              <span class="field-sep">:</span>
+              <span class="field-value">Schedule Adjustment</span>
+            </div>
+
+            <div class="field-row">
+              <span class="field-label">Description</span>
+              <span class="field-sep">:</span>
+              <span class="field-value">I Would like to request an adjustment of my schedule because my work hour overlap my class on every thursday</span>
+            </div>
+
+            <div class="field-row">
+              <span class="field-label">Attachment</span>
+              <span class="field-sep">:</span>
+              <span class="field-value">
+                <span class="attachment-chip">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  work_schedule.pdf
+                </span>
+              </span>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Response -->
+            <textarea class="response-area" placeholder="Add a response or update..."></textarea>
+
+            <div class="send-row">
+              <button class="btn-send" onclick="handleSend()">Send</button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function toggleStudents(el) {
+    const submenu = document.getElementById('students-submenu');
+    const chevron = document.getElementById('students-chevron');
+    const isOpen = submenu.classList.toggle('open');
+    chevron.style.transform = isOpen ? 'rotate(90deg)' : 'rotate(0deg)';
+    el.classList.toggle('active', isOpen);
+  }
+
+  function toggleSettings(el) {
+    const submenu = document.getElementById('settings-submenu');
+    const chevron = document.getElementById('settings-chevron');
+    const isOpen = submenu.classList.toggle('open');
+    chevron.style.transform = isOpen ? 'rotate(90deg)' : 'rotate(0deg)';
+    el.classList.toggle('active', isOpen);
+  }
+
+  function selectItem(el) {
+    document.querySelectorAll('.request-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function filterRequests() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('.request-item').forEach(item => {
+      const nameEl = item.querySelector('.item-name');
+      if (!nameEl) return;
+      const name = nameEl.textContent.toLowerCase();
+      item.style.display = name.includes(query) ? '' : 'none';
+    });
+  }
+
+  function handleSend() {
+    const ta = document.querySelector('.response-area');
+    if (!ta.value.trim()) { alert('Please enter a response first.'); return; }
+    alert('Response sent!');
+    ta.value = '';
+  }
+</script>
+</body>
+</html>   //plsp-support deatils   jan kasi sa plsp support request kapag nilccnk yong any students line mag aadjust sya sya pakanan and yong  sa plsp support details yong mismong file is lalabas
+
+here's only ONE page — no view switching needed. The request list starts full width. Click a student → list shrinks left, detail panel slides in right. I'll rewrite the whole file cleanly with this single-page approach.

@@ -1,0 +1,496 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLSP – Student Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --green: #2e7d32; --light: #43a047; --admin-blue: #2563eb; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(rgba(0,0,0,0.38),rgba(0,0,0,0.38)), url('plsp.jpg') center/cover no-repeat;
+  background-color: #2a3e2b;
+  padding: 20px;
+}
+
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 200;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 30px 20px;
+  overflow-y: auto;
+}
+.overlay.active { display: flex; }
+
+.login-card {
+  width: 420px;
+  padding: 44px 40px 36px;
+  background: rgba(255,255,255,0.14);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid rgba(255,255,255,0.28);
+  border-radius: 22px;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.45), 0 0 24px rgba(67,160,71,0.2);
+  color: #fff;
+  position: relative;
+  animation: fadeUp 0.55s ease;
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(28px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* ── Clickable badge ── */
+.login-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  background: rgba(165,255,178,0.2);
+  border: 1px solid rgba(165,255,178,0.45);
+  color: #a5ffb2;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+  position: relative;
+}
+.login-badge:hover {
+  background: rgba(165,255,178,0.32);
+  box-shadow: 0 0 14px rgba(165,255,178,0.35);
+  transform: translateY(-1px);
+}
+.login-badge:active { transform: scale(0.97); }
+.login-badge .badge-arrow {
+  font-size: 9px;
+  opacity: 0.75;
+  transition: transform 0.2s;
+}
+.login-badge.admin {
+  background: rgba(255,193,7,0.15);
+  border-color: rgba(255,193,7,0.5);
+  color: #ffe082;
+}
+.login-badge.admin:hover {
+  background: rgba(255,193,7,0.28);
+  box-shadow: 0 0 14px rgba(255,193,7,0.3);
+}
+/* small tooltip hint */
+.badge-hint {
+  font-size: 10px;
+  color: rgba(255,255,255,0.42);
+  margin-top: 4px;
+  letter-spacing: 0.2px;
+}
+
+.header { text-align:center; margin-bottom:28px; }
+.header h1 { font-family:'Playfair Display',serif; font-size:26px; margin-bottom:16px; text-shadow:0 0 12px rgba(255,255,255,0.25); }
+.logo { width:88px; height:88px; border-radius:50%; background:#fff; padding:5px; object-fit:contain; display:block; margin:0 auto; box-shadow:0 0 18px rgba(255,255,255,0.55),0 0 28px rgba(67,160,71,0.5); transition:transform 0.3s; }
+.logo:hover { transform:scale(1.05) rotate(3deg); }
+
+.badge-center { text-align:center; margin-bottom:16px; }
+
+.form-group { margin-bottom:16px; }
+.input-label { display:block; font-size:12px; font-weight:600; color:rgba(255,255,255,0.82); margin-bottom:6px; letter-spacing:0.3px; }
+.input-wrap { position:relative; display:flex; align-items:center; }
+.input-wrap .icon-left { position:absolute; left:13px; width:17px; height:17px; stroke:#777; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+.input-wrap input {
+  width:100%; padding:12px 44px; border-radius:11px;
+  border:1px solid rgba(255,255,255,0.38); background:rgba(255,255,255,0.62);
+  outline:none; font-size:14px; font-family:'DM Sans',sans-serif; color:#222;
+  transition:border-color 0.2s,box-shadow 0.2s,background 0.2s;
+}
+.input-wrap input::placeholder { color:#aaa; }
+.input-wrap input:focus { border-color:var(--light); box-shadow:0 0 12px rgba(67,160,71,0.55); background:rgba(255,255,255,0.9); }
+.toggle-pw { position:absolute; right:13px; background:transparent; border:none; cursor:pointer; padding:0; display:flex; align-items:center; }
+.toggle-pw svg { width:18px; height:18px; stroke:#888; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.forgot { text-align:center; margin-top:6px; }
+.forgot a { font-size:12px; color:#a5ffb2; text-decoration:none; font-style:italic; }
+.forgot a:hover { text-decoration:underline; }
+
+.btn-login {
+  width:100%; padding:13px; margin-top:20px;
+  background:linear-gradient(135deg,var(--light),var(--green));
+  border:none; border-radius:30px; color:#fff;
+  font-family:'DM Sans',sans-serif; font-weight:700; font-size:14px; letter-spacing:2px;
+  cursor:pointer; box-shadow:0 4px 18px rgba(46,125,50,0.55),0 0 12px rgba(67,160,71,0.4);
+  transition:transform 0.2s,box-shadow 0.2s;
+}
+.btn-login:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(46,125,50,0.7),0 0 22px rgba(67,160,71,0.65); }
+.btn-login.admin-btn {
+  background:linear-gradient(135deg,#3b82f6,var(--admin-blue));
+  box-shadow:0 4px 18px rgba(37,99,235,0.55),0 0 12px rgba(59,130,246,0.4);
+}
+.btn-login.admin-btn:hover { box-shadow:0 8px 28px rgba(37,99,235,0.7),0 0 22px rgba(59,130,246,0.65); }
+
+.text-center { text-align:center; margin-top:14px; font-size:13px; color:rgba(255,255,255,0.78); }
+.text-center a { color:#a5ffb2; text-decoration:none; font-weight:500; cursor:pointer; }
+.text-center a:hover { text-decoration:underline; }
+
+.admin-field { display:none; margin-bottom:16px; }
+.admin-field.show { display:block; }
+
+.alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 500; animation: slideDown 0.3s ease-out; font-size: 0.9rem; }
+.alert-error { background-color: #fee2e2; color: #991b1b; border-left: 4px solid #dc2626; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+.reg-modal { background: rgba(20,50,22,0.82); backdrop-filter: blur(26px); -webkit-backdrop-filter: blur(26px); border: 1px solid rgba(255,255,255,0.2); border-radius: 22px; box-shadow: 0 16px 56px rgba(0,0,0,0.6); color: #fff; width: 100%; max-width: 680px; padding: 36px 40px 32px; animation: fadeUp 0.4s ease; margin: auto; }
+.reg-header { text-align:center; margin-bottom:6px; }
+.reg-header h2 { font-family:'Playfair Display',serif; font-size:24px; margin-bottom:4px; }
+.reg-header p { font-size:12px; color:rgba(255,255,255,0.55); margin-bottom:4px; }
+.sec-title { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:#a5ffb2; margin:16px 0 10px; padding-bottom:6px; border-bottom:1px solid rgba(165,255,178,0.22); }
+.reg-row { display:grid; gap:12px; margin-bottom:12px; }
+.reg-row.cols3 { grid-template-columns:1fr 1fr 1fr; }
+.reg-row.cols2 { grid-template-columns:1fr 1fr; }
+.radio-row { display:flex; gap:16px; align-items:center; margin-top:4px; }
+.radio-option { display:flex; align-items:center; gap:8px; font-size:12px; color:#fff; }
+.radio-option input { width:16px; height:16px; accent-color:#2e7d32; }
+.reg-field label { display:block; font-size:11px; font-weight:600; color:rgba(255,255,255,0.75); margin-bottom:5px; letter-spacing:0.3px; }
+.reg-field input, .reg-field select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.3); background:rgba(255,255,255,0.62); outline:none; font-size:13px; font-family:'DM Sans',sans-serif; color:#222; transition:border-color 0.2s,box-shadow 0.2s,background 0.2s; }
+.reg-field input::placeholder { color:#aaa; }
+.reg-field select { color:#888; appearance:none; }
+.reg-field input:focus, .reg-field select:focus { border-color:var(--light); box-shadow:0 0 10px rgba(67,160,71,0.45); background:rgba(255,255,255,0.92); }
+.type-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+.type-opt { background:rgba(255,255,255,0.55); border:2px solid transparent; border-radius:9px; padding:9px 12px; display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; color:#222; font-weight:500; transition:border-color 0.15s,background 0.15s; }
+.type-opt input[type="radio"] { display:none; }
+.type-opt.selected { border-color:#a5ffb2; background:rgba(165,255,178,0.2); color:#fff; }
+.type-icon { font-size:16px; }
+.privacy-box { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16); border-radius:9px; padding:11px 14px; font-size:10.5px; color:rgba(255,255,255,0.68); line-height:1.6; margin-bottom:12px; }
+.agree-row { display:flex; align-items:center; gap:8px; margin-bottom:18px; }
+.agree-row input[type="checkbox"] { width:auto; accent-color:#a5ffb2; }
+.agree-row label { font-size:12px; color:rgba(255,255,255,0.85); }
+.reg-btn-row { display:flex; gap:10px; justify-content:flex-end; }
+.btn-cancel { padding:10px 26px; border-radius:30px; border:1.5px solid rgba(255,255,255,0.4); background:transparent; color:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; transition:background 0.15s; }
+.btn-cancel:hover { background:rgba(255,255,255,0.12); }
+.btn-reg-submit { padding:10px 30px; border-radius:30px; border:none; background:linear-gradient(135deg,var(--light),var(--green)); color:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.5px; cursor:pointer; box-shadow:0 4px 16px rgba(46,125,50,0.5); transition:transform 0.2s,box-shadow 0.2s; }
+.btn-reg-submit:hover { transform:translateY(-2px); box-shadow:0 7px 24px rgba(46,125,50,0.65); }
+.otp-modal { background: #fff; border-radius: 20px; padding: 44px 40px 36px; width: 380px; text-align: center; animation: popIn 0.25s ease; margin: auto; }
+@keyframes popIn { from { transform:scale(0.85); opacity:0; } to   { transform:scale(1);    opacity:1; } }
+.otp-icon { width:62px; height:62px; background:#e8f5e9; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 18px; }
+.otp-icon svg { width:30px; height:30px; stroke:#2eaa4a; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.otp-modal h3 { font-family:'Playfair Display',serif; font-size:20px; color:#1a1a1a; margin-bottom:8px; }
+.otp-modal p { font-size:13px; color:#666; line-height:1.55; margin-bottom:28px; }
+.otp-inputs { display:flex; justify-content:center; gap:10px; margin-bottom:28px; }
+.otp-inputs input { width:48px; height:56px; border:2px solid #ddd; border-radius:11px; text-align:center; font-size:22px; font-weight:700; color:#1a1a1a; outline:none; font-family:'DM Sans',sans-serif; transition:border-color 0.15s,box-shadow 0.15s; }
+.otp-inputs input:focus { border-color:#2eaa4a; box-shadow:0 0 0 3px rgba(46,170,74,0.15); }
+.btn-verify { width:100%; background:linear-gradient(135deg,var(--light),var(--green)); color:#fff; border:none; border-radius:30px; padding:13px; font-size:14px; font-weight:700; font-family:'DM Sans',sans-serif; letter-spacing:1px; cursor:pointer; box-shadow:0 4px 16px rgba(46,125,50,0.45); transition:transform 0.2s,box-shadow 0.2s; margin-bottom:14px; }
+.btn-verify:hover { transform:translateY(-2px); box-shadow:0 7px 22px rgba(46,125,50,0.6); }
+.resend-text { font-size:12px; color:#999; }
+.resend-text a { color:#2eaa4a; text-decoration:none; font-weight:600; cursor:pointer; }
+.resend-text a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div class="login-card">
+
+  <div class="header">
+    <h1>Welcome Plspian!</h1>
+    <img src="logo.jpg" class="logo" alt="PLSP Logo">
+  </div>
+
+  <div class="badge-center">
+    <span class="login-badge" id="loginBadge" onclick="toggleMode()" title="Click to switch login type">
+      <span id="badgeText">Student Login</span>
+      <span class="badge-arrow">⇄</span>
+    </span>
+    <div class="badge-hint" id="badgeHint">Click to switch to Admin</div>
+  </div>
+
+  <?php $loginError = isset($_GET['error']) ? trim((string) $_GET['error']) : ''; ?>
+  <?php if ($loginError !== ''): ?>
+    <div class="alert alert-error" id="errorAlert">
+      <strong>❌ Error:</strong> <?php echo htmlspecialchars($loginError); ?>
+    </div>
+  <?php endif; ?>
+
+  <form action="process_login.php" method="POST">
+    <input type="hidden" name="login_type" id="loginType" value="student">
+
+    <div class="form-group">
+      <label class="input-label" id="emailLabel">Email / Student No.</label>
+      <div class="input-wrap">
+        <svg class="icon-left" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <input type="text" id="emailInput" name="email" placeholder="Enter Email or Student ID" autocomplete="username" required>
+      </div>
+    </div>
+
+    <div class="admin-field" id="adminField">
+      <label class="input-label">Teacher ID</label>
+      <div class="input-wrap">
+        <svg class="icon-left" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input type="text" name="teachers_id" placeholder="Enter teachers_id" autocomplete="username">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="input-label">Password</label>
+      <div class="input-wrap">
+        <svg class="icon-left" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input type="password" id="pwInput" name="password" placeholder="Enter Your Password" required autocomplete="current-password">
+        <button class="toggle-pw" type="button" onclick="togglePw()" aria-label="Toggle password">
+          <svg id="eyeIcon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <div class="forgot"><a href="#">Forgot Password?</a></div>
+    </div>
+
+    <div class="forgot" style="margin-top:12px; font-size:12px; color:#dff7e0; line-height:1.5;">
+      Use your registered PLSP student or admin account credentials.
+    </div>
+
+    <button class="btn-login" id="loginBtn" type="submit">LOG IN</button>
+  </form>
+
+  <div class="text-center" id="registerLink">
+    Don't have an account? <a onclick="showRegister()">Register</a>
+  </div>
+</div>
+
+<!-- ═══ REGISTER OVERLAY ═══ -->
+<div class="overlay" id="regOverlay">
+  <div class="reg-modal">
+    <div class="reg-header">
+      <h2>Register na!</h2>
+      <p>Fill in your details to create your student account.</p>
+    </div>
+
+    <div class="sec-title">Personal Information</div>
+    <div class="reg-row cols3">
+      <div class="reg-field"><label>First Name</label><input type="text" placeholder="Enter First Name"></div>
+      <div class="reg-field"><label>Middle Name</label><input type="text" placeholder="Enter Middle Name"></div>
+      <div class="reg-field"><label>Last Name</label><input type="text" placeholder="Enter Last Name"></div>
+    </div>
+    <div class="reg-row cols2">
+      <div class="reg-field"><label>Student ID Number</label><input type="text" placeholder="Enter Your Student Number"></div>
+      <div class="reg-field"><label>Date of Birth</label><input type="text" placeholder="mm/dd/yyyy"></div>
+    </div>
+    <div class="reg-row cols2">
+      <div class="reg-field"><label>Email Address</label><input type="email" name="email" placeholder="******@gmail.com"></div>
+      <div class="reg-field"><label>Mobile Number</label><input type="text" name="mobile" placeholder="09XXXXXXXXXX"></div>
+    </div>
+    <div class="reg-row cols2">
+      <div class="reg-field">
+        <label>Sex</label>
+        <div class="radio-row">
+          <label class="radio-option"><input type="radio" name="sex" value="Male"> Male</label>
+          <label class="radio-option"><input type="radio" name="sex" value="Female"> Female</label>
+        </div>
+      </div>
+      <div class="reg-field">
+        <label>Blood Type</label>
+        <select name="blood_type">
+          <option value="" disabled selected>Select Blood Type</option>
+          <option value="A+">A+</option><option value="A-">A-</option>
+          <option value="B+">B+</option><option value="B-">B-</option>
+          <option value="AB+">AB+</option><option value="AB-">AB-</option>
+          <option value="O+">O+</option><option value="O-">O-</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sec-title">Emergency Contact</div>
+    <div class="reg-row cols2">
+      <div class="reg-field"><label>Emergency Contact Person</label><input type="text" name="emergency_person" placeholder="Emergency Contact Person"></div>
+      <div class="reg-field"><label>Emergency Contact Number</label><input type="text" name="emergency_number" placeholder="Emergency Contact Number"></div>
+    </div>
+    <div class="reg-row cols2">
+      <div class="reg-field"><label>Emergency Contact Name</label><input type="text" name="emergency_name" placeholder="Emergency Contact Name"></div>
+      <div class="reg-field"><label>Relationship</label><input type="text" name="emergency_relationship" placeholder="Relationship"></div>
+    </div>
+
+    <div class="sec-title">Academic Information</div>
+    <div class="reg-row cols3">
+      <div class="reg-field">
+        <label>Course</label>
+        <select><option value="" disabled selected>Course</option><option>BSIT</option><option>BSCS</option><option>BSED</option><option>BSN</option><option>BSBA</option></select>
+      </div>
+      <div class="reg-field">
+        <label>Year Level</label>
+        <select><option value="" disabled selected>Year Level</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select>
+      </div>
+      <div class="reg-field"><label>Section</label><input type="text" placeholder="Section"></div>
+    </div>
+
+    <div class="sec-title">Student Type / Circumstance</div>
+    <div class="type-grid">
+      <label class="type-opt" onclick="selectType(this)"><input type="radio" name="stype" value="working"><span class="type-icon">💼</span> Working Student</label>
+      <label class="type-opt" onclick="selectType(this)"><input type="radio" name="stype" value="pwd"><span class="type-icon">♿</span> PWD Student</label>
+      <label class="type-opt" onclick="selectType(this)"><input type="radio" name="stype" value="solo"><span class="type-icon">👨‍👧</span> Solo Parent Student</label>
+      <label class="type-opt" onclick="selectType(this)"><input type="radio" name="stype" value="irregular"><span class="type-icon">📋</span> Irregular Student</label>
+      <label class="type-opt" onclick="selectType(this)"><input type="radio" name="stype" value="indigenous"><span class="type-icon">🌿</span> Indigenous People</label>
+    </div>
+
+    <div class="sec-title">Account Information</div>
+    <div class="reg-row cols2">
+      <div class="reg-field"><label>Password</label><input type="password" name="password" placeholder="Password" autocomplete="new-password"></div>
+      <div class="reg-field"><label>Confirm Password</label><input type="password" name="confirm_password" placeholder="Confirm Password" autocomplete="new-password"></div>
+    </div>
+
+    <div class="privacy-box">
+      All personal information collected from students during the registration process will be handled with the highest level of confidentiality. The data will be used strictly for academic and administrative purposes within the institution. The school ensures that all information is securely stored and protected against unauthorized access, and will not be shared, disclosed, or distributed to any external parties, in accordance with the Data Privacy Act of 2012.
+    </div>
+
+    <div class="agree-row">
+      <input type="checkbox" id="agreeChk">
+      <label for="agreeChk">I agree to the Data Privacy Policy</label>
+    </div>
+
+    <div class="reg-btn-row">
+      <button class="btn-cancel" onclick="closeRegister()">Cancel</button>
+      <button class="btn-reg-submit" onclick="showOTP()">Register</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ OTP OVERLAY ═══ -->
+<div class="overlay" id="otpOverlay">
+  <div class="otp-modal">
+    <div class="otp-icon">
+      <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+    </div>
+    <h3>Check your email</h3>
+    <p>We've sent a one-time password (OTP)<br>to your registered email address.</p>
+    <div class="otp-inputs">
+      <input type="text" maxlength="1" id="o1" oninput="otpNext(this,'o2')" onkeydown="otpBack(event,this,'')">
+      <input type="text" maxlength="1" id="o2" oninput="otpNext(this,'o3')" onkeydown="otpBack(event,this,'o1')">
+      <input type="text" maxlength="1" id="o3" oninput="otpNext(this,'o4')" onkeydown="otpBack(event,this,'o2')">
+      <input type="text" maxlength="1" id="o4" oninput="otpNext(this,'o5')" onkeydown="otpBack(event,this,'o3')">
+      <input type="text" maxlength="1" id="o5" oninput="otpNext(this,'o6')" onkeydown="otpBack(event,this,'o4')">
+      <input type="text" maxlength="1" id="o6" oninput="otpNext(this,'')"   onkeydown="otpBack(event,this,'o5')">
+    </div>
+    <button class="btn-verify" onclick="verifyOTP()">VERIFY OTP</button>
+    <p class="resend-text">Didn't receive a code? <a onclick="resendOTP()">Resend OTP</a></p>
+  </div>
+</div>
+
+<script>
+  let currentMode = 'student';
+
+  function toggleMode() {
+    currentMode = currentMode === 'student' ? 'admin' : 'student';
+    applyMode(currentMode);
+  }
+
+  function applyMode(mode) {
+    const badge     = document.getElementById('loginBadge');
+    const badgeText = document.getElementById('badgeText');
+    const hint      = document.getElementById('badgeHint');
+    const emailLabel  = document.getElementById('emailLabel');
+    const emailInput  = document.getElementById('emailInput');
+    const adminField  = document.getElementById('adminField');
+    const registerLink = document.getElementById('registerLink');
+    const loginBtn  = document.getElementById('loginBtn');
+    const loginType = document.getElementById('loginType');
+
+    if (mode === 'admin') {
+      badge.classList.add('admin');
+      badgeText.textContent = 'Admin Login';
+      hint.textContent = 'Click to switch to Student';
+      emailLabel.textContent = 'Admin Email';
+      emailInput.placeholder = 'Enter Admin Email';
+      adminField.classList.add('show');
+      registerLink.style.display = 'none';
+      loginBtn.classList.add('admin-btn');
+      loginType.value = 'admin';
+    } else {
+      badge.classList.remove('admin');
+      badgeText.textContent = 'Student Login';
+      hint.textContent = 'Click to switch to Admin';
+      emailLabel.textContent = 'Email / Student No.';
+      emailInput.placeholder = 'Enter Email or Student ID';
+      adminField.classList.remove('show');
+      registerLink.style.display = 'block';
+      loginBtn.classList.remove('admin-btn');
+      loginType.value = 'student';
+    }
+  }
+
+  function togglePw() {
+    const pw = document.getElementById('pwInput');
+    const icon = document.getElementById('eyeIcon');
+    if (pw.type === 'password') {
+      pw.type = 'text';
+      icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
+    } else {
+      pw.type = 'password';
+      icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    }
+  }
+
+  function showRegister() {
+    document.getElementById('regOverlay').classList.add('active');
+  }
+
+  function closeRegister() {
+    document.getElementById('regOverlay').classList.remove('active');
+  }
+
+  function selectType(el) {
+    document.querySelectorAll('.type-opt').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function showOTP() {
+    document.getElementById('regOverlay').classList.remove('active');
+    document.getElementById('otpOverlay').classList.add('active');
+    setTimeout(() => document.getElementById('o1').focus(), 150);
+  }
+
+  function otpNext(el, nextId) {
+    el.value = el.value.replace(/[^0-9]/g, '');
+    if (el.value && nextId) document.getElementById(nextId).focus();
+  }
+
+  function otpBack(e, el, prevId) {
+    if (e.key === 'Backspace' && !el.value && prevId) document.getElementById(prevId).focus();
+  }
+
+  function verifyOTP() {
+    const code = ['o1','o2','o3','o4','o5','o6'].map(id => document.getElementById(id).value).join('');
+    if (code.length === 6) {
+      alert('OTP Verified! Registration complete. Welcome to PLSP!');
+      document.getElementById('otpOverlay').classList.remove('active');
+    } else {
+      alert('Please enter all 6 digits.');
+    }
+  }
+
+  function resendOTP() {
+    alert('A new OTP has been sent to your email.');
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const errorAlert = document.getElementById('errorAlert');
+    if (errorAlert) {
+      setTimeout(() => {
+        errorAlert.style.transition = 'opacity 0.3s ease, max-height 0.3s ease, margin 0.3s ease';
+        errorAlert.style.opacity = '0';
+        errorAlert.style.maxHeight = '0';
+        errorAlert.style.margin = '0';
+        setTimeout(() => errorAlert.remove(), 320);
+      }, 3200);
+    }
+  });
+</script>
+
+</body>
+</html>
