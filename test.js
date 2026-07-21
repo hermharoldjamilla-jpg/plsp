@@ -1,25 +1,30 @@
-const dns = require("node:dns");
+const { MongoClient, ServerApiVersion } = require('mongodb');
 
-dns.setDefaultResultOrder("ipv4first");
+const uri = "mongodb://kaiselnotokay_db_user:BKc50iPLpCXj8OYk@ac-wgpi9ud-shard-00-00.ltydj0a.mongodb.net:27017,ac-wgpi9ud-shard-00-01.ltydj0a.mongodb.net:27017,ac-wgpi9ud-shard-00-02.ltydj0a.mongodb.net:27017/plsp_monitoring?ssl=true&replicaSet=atlas-k92bpg-shard-0&authSource=admin&appName=Cluster0";
 
-const { MongoClient } = require("mongodb");
-
-const uri = "mongodb+srv://kaiselnotokay_db_user:notokay@cluster0.ltydj0a.mongodb.net/plsp_monitoring?authSource=admin&retryWrites=true&w=majority";
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
 
 async function run() {
-    try {
-        const client = new MongoClient(uri);
+  try {
+    await client.connect();
 
-        await client.connect();
+    console.log("✅ CONNECTED SUCCESSFULLY");
 
-        console.log("CONNECTED SUCCESSFULLY");
+    await client.db("admin").command({ ping: 1 });
 
-        console.log(await client.db().admin().ping());
-
-        await client.close();
-    } catch (err) {
-        console.error(err);
-    }
+    console.log("✅ Ping successful!");
+  } catch (err) {
+    console.error("❌ ERROR:");
+    console.error(err);
+  } finally {
+    await client.close();
+  }
 }
 
 run();

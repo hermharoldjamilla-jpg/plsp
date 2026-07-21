@@ -4,6 +4,23 @@ const { MongoClient } = require('mongodb');
 process.env.DOTENV_CONFIG_QUIET = 'true';
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
+const RETRY_COUNT = 1;
+const RETRY_DELAY_MS = 500;
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+async function connectWithRetry(client, retries = RETRY_COUNT) {
+  try {
+    return await client.connect();
+  } catch (error) {
+    if (retries > 0 && /tls|ssl|alert/i.test(error.message)) {
+      await sleep(RETRY_DELAY_MS);
+      return connectWithRetry(client, retries - 1);
+    }
+    throw error;
+  }
+}
+
 function escapeRegExp(value) {
   return String(value ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -44,10 +61,11 @@ function buildFilter(type, search) {
     connectTimeoutMS: 10000,
     socketTimeoutMS: 10000,
     maxPoolSize: 1,
+    tls: true,
   });
 
   try {
-    await client.connect();
+    await connectWithRetry(client);
     const db = client.db(dbName);
     const collection = db.collection(collectionName);
 
@@ -58,7 +76,6 @@ function buildFilter(type, search) {
         counts[type] = await collection.countDocuments({ circumstances_type: type });
       }
       counts.All = await collection.countDocuments({});
-      await client.close();
       process.stdout.write(JSON.stringify(counts));
       return;
     }
@@ -126,10 +143,11 @@ function buildFilter(type, search) {
       verified_by: String(row.verified_by ?? '').trim(),
     }));
 
-    await client.close();
     process.stdout.write(JSON.stringify(payload));
   } catch (error) {
     await client.close().catch(() => {});
     process.stdout.write(JSON.stringify({ error: error.message }));
+  } finally {
+    await client.close().catch(() => {});
   }
 })();

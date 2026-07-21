@@ -4,6 +4,23 @@ const { MongoClient, ObjectId } = require('mongodb');
 process.env.DOTENV_CONFIG_QUIET = 'true';
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
+const RETRY_COUNT = 1;
+const RETRY_DELAY_MS = 500;
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+async function connectWithRetry(client, retries = RETRY_COUNT) {
+  try {
+    return await client.connect();
+  } catch (error) {
+    if (retries > 0 && /tls|ssl|alert/i.test(error.message)) {
+      await sleep(RETRY_DELAY_MS);
+      return connectWithRetry(client, retries - 1);
+    }
+    throw error;
+  }
+}
+
 const action = process.argv[2] || 'fetch';
 const payload = process.argv[3] ? JSON.parse(process.argv[3]) : {};
 const uri = process.env.MONGODB_URI || process.env.MONGO_URI || '';
@@ -29,14 +46,15 @@ function formatDoc(doc) {
   }
 
   const client = new MongoClient(uri, {
-    serverSelectionTimeoutMS: 5000,
-    connectTimeoutMS: 5000,
-    socketTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
+    socketTimeoutMS: 10000,
     maxPoolSize: 1,
+    tls: true,
   });
 
   try {
-    await client.connect();
+    await connectWithRetry(client);
     const db = client.db(dbName);
     const collection = db.collection(collectionName);
 

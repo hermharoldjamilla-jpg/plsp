@@ -6,11 +6,14 @@ if (!isset($_SESSION['admin_id'])) {
     exit();
 }
 
-$statsScript = __DIR__ . '/mongo_stats.js';
-$statsCommand = sprintf('node %s', escapeshellarg($statsScript));
-$statsOutput = shell_exec($statsCommand);
-$statsRaw = trim((string) $statsOutput);
-$stats = json_decode($statsRaw, true);
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'node_helper.php';
+$result = run_mongo_helper('mongo_stats.js');
+$stats = [];
+if ($result['success'] && is_array($result['data'])) {
+    $stats = $result['data'];
+} else {
+    error_log('mongo_stats helper failed: ' . ($result['error'] ?? 'unknown error'));
+}
 
 if (!is_array($stats) || empty($stats['success'])) {
     $stats = [

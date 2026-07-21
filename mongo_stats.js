@@ -4,6 +4,23 @@ const { MongoClient } = require('mongodb');
 process.env.DOTENV_CONFIG_QUIET = 'true';
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
+const RETRY_COUNT = 1;
+const RETRY_DELAY_MS = 500;
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+async function connectWithRetry(client, retries = RETRY_COUNT) {
+  try {
+    return await client.connect();
+  } catch (error) {
+    if (retries > 0 && /tls|ssl|alert/i.test(error.message)) {
+      await sleep(RETRY_DELAY_MS);
+      return connectWithRetry(client, retries - 1);
+    }
+    throw error;
+  }
+}
+
 function normalizeValue(value) {
   return String(value ?? '').trim();
 }
@@ -37,10 +54,11 @@ function buildSeries(labels, countsByLabel) {
     connectTimeoutMS: 10000,
     socketTimeoutMS: 10000,
     maxPoolSize: 1,
+    tls: true,
   });
 
   try {
-    await client.connect();
+    await connectWithRetry(client);
     const db = client.db(dbName);
     const students = db.collection(collectionName);
 

@@ -1,4 +1,70 @@
 <?php
+session_start();
+
+function h(string $value): string {
+    return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+}
+
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'node_helper.php';
+
+function fetchMongoAdmins(): array {
+    $result = run_mongo_helper('mongo_admin.js', ['fetch']);
+    if (!$result['success'] || !is_array($result['data'])) {
+        error_log('mongo_admin helper failed: ' . ($result['error'] ?? 'no output'));
+        return [];
+    }
+    return $result['data'];
+}
+
+function findMongoAdmin(array $docs, string $sessionId, string $sessionEmail): ?array {
+    $sessionId = trim($sessionId);
+    $sessionEmail = trim(strtolower($sessionEmail));
+    foreach ($docs as $doc) {
+        $docId = (string)($doc['id'] ?? $doc['_id'] ?? '');
+        $docEmail = strtolower((string)($doc['email'] ?? ''));
+        $docUsername = strtolower((string)($doc['username'] ?? ''));
+        if ($sessionId !== '' && ($sessionId === $docId || $sessionId === $docUsername)) {
+            return $doc;
+        }
+        if ($sessionEmail !== '' && $sessionEmail === $docEmail) {
+            return $doc;
+        }
+    }
+    return null;
+}
+
+function mapMongoAdminToProfile(array $doc): array {
+    $fullName = $doc['username'] ?? $doc['name'] ?? $doc['email'] ?? 'Administrator';
+    $createdAt = $doc['createdAt'] ?? $doc['created_at'] ?? null;
+    $dateCreated = $createdAt ? date('F j, Y', strtotime($createdAt)) : 'Unknown';
+
+    return [
+        'initials'        => strtoupper(substr($fullName, 0, 2)),
+        'full_name'       => $fullName,
+        'position'        => $doc['position'] ?? $doc['role'] ?? 'Administrator',
+        'employee_id'     => $doc['admin_id'] ?? $doc['id'] ?? $doc['_id'] ?? '',
+        'department'      => $doc['dept'] ?? $doc['department'] ?? 'Guidance Office',
+        'email'           => $doc['email'] ?? '',
+        'contact'         => $doc['contact'] ?? '',
+        'bio'             => $doc['bio'] ?? 'Administrator of the PLSP Student Monitoring System.',
+        'avatar'          => $doc['avatar'] ?? 'assets/img/avatar.jpg',
+        'username'        => $doc['username'] ?? $doc['email'] ?? '',
+        'role'            => $doc['role'] ?? 'Administrator',
+        'status'          => 'Active',
+        'date_created'    => $dateCreated,
+        'last_login'      => 'Today, 9:00 AM',
+        'member_since'    => $dateCreated,
+        'office_name'     => $doc['office_name'] ?? 'Guidance and Counseling Office',
+        'office_email'    => $doc['office_email'] ?? 'guidance@plsp.edu.ph',
+        'office_contact'  => $doc['office_contact'] ?? '(043) 123-4567',
+        'office_location' => $doc['office_location'] ?? '2nd Floor, Student Services Building',
+        'office_hours'    => $doc['office_hours'] ?? 'Monday - Friday<br>8:00 AM - 5:00 PM',
+        'two_fa'          => isset($doc['two_fa']) ? (bool)$doc['two_fa'] : true,
+        'login_notif'     => isset($doc['login_notif']) ? (bool)$doc['login_notif'] : true,
+        'active_sessions' => $doc['active_sessions'] ?? 2,
+    ];
+}
+
 $user = [
     'full_name'      => 'Juan Dela Cruz',
     'position'       => 'Guidance Counselor',
@@ -23,6 +89,16 @@ $user = [
     'login_notif'    => true,
     'active_sessions'=> 2,
 ];
+
+$sessionAdminId = trim((string)($_SESSION['admin_id'] ?? ''));
+$sessionAdminEmail = trim(strtolower($_SESSION['admin_email'] ?? ''));
+if ($sessionAdminId !== '' || $sessionAdminEmail !== '') {
+    $mongoAdmins = fetchMongoAdmins();
+    $matchedAdmin = findMongoAdmin($mongoAdmins, $sessionAdminId, $sessionAdminEmail);
+    if ($matchedAdmin !== null) {
+        $user = mapMongoAdminToProfile($matchedAdmin);
+    }
+}
 
 // Handle form submission (edit profile)
 $success_msg = '';

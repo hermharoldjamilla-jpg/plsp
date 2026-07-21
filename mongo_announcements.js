@@ -39,6 +39,26 @@ const uri = process.env.MONGODB_URI || process.env.MONGO_URI || '';
 const dbName = process.env.MONGO_DB_NAME || 'plsp_monitoring';
 const collectionName = process.env.MONGO_ANNOUNCEMENT_COLLECTION || 'announcement';
 
+const fs = require('fs');
+const cachePath = path.join(__dirname, 'announcements_cache.json');
+
+const RETRY_COUNT = 1;
+const RETRY_DELAY_MS = 500;
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+async function connectWithRetry(client, retries = RETRY_COUNT) {
+  try {
+    return await client.connect();
+  } catch (error) {
+    if (retries > 0 && /tls|ssl|alert/i.test(error.message)) {
+      await sleep(RETRY_DELAY_MS);
+      return connectWithRetry(client, retries - 1);
+    }
+    throw error;
+  }
+}
+
 async function main() {
   if (!uri || uri.includes('<db_password>')) {
     console.error(JSON.stringify({ success: false, error: 'MongoDB URI is not configured.' }));
@@ -46,14 +66,15 @@ async function main() {
   }
 
   const client = new MongoClient(uri, {
-    serverSelectionTimeoutMS: 5000,
-    connectTimeoutMS: 5000,
-    socketTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
+    socketTimeoutMS: 10000,
     maxPoolSize: 5,
+    tls: true,
   });
 
   try {
-    await client.connect();
+    await connectWithRetry(client);
     const db = client.db(dbName);
     const collection = db.collection(collectionName);
 
@@ -68,14 +89,27 @@ async function main() {
         ];
       }
       const docs = await collection.find(query).sort({ createdAt: -1, _id: -1 }).toArray();
-      const rows = docs.map(doc => ({
-        id: doc._id.toString(),
-        title: doc.title || '',
-        description: doc.description || '',
-        createdAt: doc.createdAt || null,
-        posted_by: doc.posted_by || 'Admin',
-        attachment: doc.attachment || null,
-      }));
+      const rows = docs.map(doc => {
+        let attachment = null;
+        if (Array.isArray(doc.attachment)) {
+          attachment = doc.attachment.length ? doc.attachment[0] : null;
+        } else if (doc.attachment && typeof doc.attachment === 'object') {
+          // handle stored object like { filename: 'a.png' }
+          attachment = doc.attachment.filename || doc.attachment.name || null;
+        } else {
+          attachment = doc.attachment || null;
+        }
+        return {
+          id: doc._id.toString(),
+          title: doc.title || '',
+          description: doc.description || '',
+          createdAt: doc.createdAt || null,
+          posted_by: doc.posted_by || 'Admin',
+          attachment,
+        };
+      });
+      // update local cache for offline fallback
+      try { fs.writeFileSync(cachePath, JSON.stringify(rows), 'utf8'); } catch (e) { /* ignore cache write errors */ }
       process.stdout.write(JSON.stringify(rows));
       return;
     }
@@ -104,6 +138,18 @@ async function main() {
 
     process.stdout.write(JSON.stringify({ success: false, error: 'Unknown action.' }));
   } catch (error) {
+    // On error (for example TLS/SSL to Atlas), attempt to return a local cache for 'fetch'
+    try {
+      if (action === 'fetch' && fs.existsSync(cachePath)) {
+        const cached = fs.readFileSync(cachePath, 'utf8');
+        // ensure cached is valid JSON
+        JSON.parse(cached);
+        process.stdout.write(cached);
+        return;
+      }
+    } catch (e) {
+      // fall through to error emit below
+    }
     process.stdout.write(JSON.stringify({ success: false, error: error.message }));
   } finally {
     await client.close();

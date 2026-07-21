@@ -1,20 +1,22 @@
 <?php
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'node_helper.php';
+
 if (isset($_GET['ajax'])) {
     header('Content-Type: application/json');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
 
     $type = $_GET['type'] ?? 'All';
     $search = trim($_GET['search'] ?? '');
-    $scriptPath = __DIR__ . '/mongo_students.js';
-    $cmd = sprintf('node %s %s %s', escapeshellarg($scriptPath), escapeshellarg($type), escapeshellarg($search));
-    $output = shell_exec($cmd);
-    $payload = trim((string) $output);
+    $result = run_mongo_helper('mongo_students.js', [$type, $search]);
 
-    if ($payload === '') {
-        echo json_encode(['error' => 'No data returned from MongoDB.']);
+    if (!$result['success']) {
+        echo json_encode(['error' => $result['error'] ?? 'Unable to fetch students.']);
         exit;
     }
 
-    echo $payload;
+    echo json_encode($result['data']);
     exit;
 }
 ?>
@@ -387,13 +389,17 @@ let searchTimer = null;
 
 async function loadCounts() {
   try {
-    const res  = await fetch('students.php?ajax=1&type=__counts__');
+    const res  = await fetch('students.php?ajax=1&type=__counts__', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
     const data = await res.json();
+    if (data.error) throw new Error(data.error);
     for (const [type, count] of Object.entries(data)) {
       const el = document.getElementById('count-' + type);
       if (el) el.textContent = count + ' cases';
     }
-  } catch (e) { console.error('Count fetch error:', e); }
+  } catch (e) {
+    console.error('Count fetch error:', e);
+  }
 }
 
 async function loadStudents() {
@@ -403,12 +409,16 @@ async function loadStudents() {
   const params = new URLSearchParams({ ajax: 1, type: activeType, search: searchQuery });
 
   try {
-    const res  = await fetch('students.php?' + params.toString());
+    const res  = await fetch('students.php?' + params.toString(), { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
     const rows = await res.json();
 
-    if (rows.error) {
-      tbody.innerHTML = `<tr><td colspan="6" class="empty-state">⚠️ ${rows.error}</td></tr>`;
-      return;
+    if (!Array.isArray(rows)) {
+      if (rows && rows.error) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">⚠️ ${esc(rows.error)}</td></tr>`;
+        return;
+      }
+      throw new Error('Invalid student data received from server.');
     }
 
     document.getElementById('resultMeta').textContent =

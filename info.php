@@ -5,11 +5,14 @@ if (!$student_id) {
     exit;
 }
 
-$mongoScript = __DIR__ . '/mongo_students.js';
-$cmd = sprintf('node %s %s %s', escapeshellarg($mongoScript), escapeshellarg('All'), escapeshellarg(''));
-$output = shell_exec($cmd);
-$payload = trim((string) $output);
-$students = json_decode($payload, true);
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'node_helper.php';
+$result = run_mongo_helper('mongo_students.js', ['All', '']);
+$students = [];
+if ($result['success'] && is_array($result['data'])) {
+    $students = $result['data'];
+} else {
+    error_log('mongo_students helper failed in info.php: ' . ($result['error'] ?? 'unknown error'));
+}
 
 $student_row = null;
 if (is_array($students)) {

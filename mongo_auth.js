@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const path = require('path');
+const dns = require('node:dns');
 const bcrypt = require('bcryptjs');
 const { MongoClient } = require('mongodb');
 process.env.DOTENV_CONFIG_QUIET = 'true';
@@ -9,7 +10,11 @@ function isConnectionError(message) {
   return /SSL routines|tlsv1|tls|handshake|MongoServerSelectionError|serverSelection|ECONNRESET|ECONNREFUSED|ENOTFOUND|timed out|querySrv/i.test(message || '');
 }
 
-function buildMongoUriCandidates(uri, dbName) {
+function isAuthenticationError(message) {
+  return /bad auth|authentication failed|not authorized|auth failed|auth error|invalid password|user not found/i.test(message || '');
+}
+
+async function buildMongoUriCandidates(uri, dbName) {
   const candidates = [];
   const normalizedUri = String(uri || '').trim();
   if (!normalizedUri) {
@@ -34,11 +39,22 @@ function buildMongoUriCandidates(uri, dbName) {
     const dbPath = parsed.pathname && parsed.pathname !== '/' ? parsed.pathname.replace(/^\//, '') : dbName;
 
     if (cleanHost) {
-      addCandidate(`mongodb+srv://${authPart}${cleanHost}/${dbPath}?authSource=admin&retryWrites=true&w=majority&tls=true`);
-      addCandidate(`mongodb+srv://${authPart}${cleanHost}/${dbPath}?authSource=admin&retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=true`);
-      addCandidate(`mongodb://${authPart}${cleanHost}:27017/${dbPath}?authSource=admin&ssl=true`);
-      addCandidate(`mongodb://${authPart}${cleanHost}:27017/${dbPath}?authSource=admin&tls=true`);
       addCandidate(`mongodb://${authPart}${cleanHost}:27017/${dbPath}?authSource=admin&tls=true&tlsAllowInvalidCertificates=true`);
+      addCandidate(`mongodb+srv://${authPart}${cleanHost}/${dbPath}?authSource=admin&retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=true`);
+      addCandidate(normalizedUri);
+
+      try {
+        const srvRecords = await dns.promises.resolveSrv(`_mongodb._tcp.${cleanHost}`);
+        for (const record of srvRecords || []) {
+          const target = String(record.name || '').replace(/\.$/, '');
+          const port = record.port || 27017;
+          if (target) {
+            addCandidate(`mongodb://${authPart}${target}:${port}/${dbPath}?authSource=admin&tls=true&tlsAllowInvalidCertificates=true`);
+          }
+        }
+      } catch (error) {
+        // Ignore SRV resolution failures and continue with the direct host candidates.
+      }
     }
   } catch (error) {
     // Ignore URI parsing errors and fall back to the original URI.
@@ -48,23 +64,23 @@ function buildMongoUriCandidates(uri, dbName) {
 }
 
 async function connectWithFallback(uri, dbName, collectionName) {
-  const candidates = buildMongoUriCandidates(uri, dbName);
+  const candidates = await buildMongoUriCandidates(uri, dbName);
   let lastError = null;
 
   for (const candidateUri of candidates) {
     const client = new MongoClient(candidateUri, {
-      serverSelectionTimeoutMS: 10000,
-      connectTimeoutMS: 10000,
-      socketTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 3000,
+      connectTimeoutMS: 3000,
+      socketTimeoutMS: 3000,
       maxPoolSize: 1,
       tls: true,
       tlsAllowInvalidCertificates: true,
-      retryWrites: true,
-      retryReads: true,
+      retryWrites: false,
+      retryReads: false,
     });
 
     try {
-      await client.connect();
+      await connectWithRetry(client);
       const db = client.db(dbName);
       const collection = db.collection(collectionName);
       return { client, collection };
@@ -192,7 +208,10 @@ function normalizeUser(user, identifier, loginType) {
 
     process.stdout.write(JSON.stringify({ success: true, user: normalizedUser }));
   } catch (error) {
-    const message = isConnectionError(error.message) ? 'The authentication service is currently unavailable. Please try again later.' : error.message;
+    const message = isConnectionError(error.message)
+      ? 'The authentication service is currently unavailable. Please try again later.'
+      : (isAuthenticationError(error.message) ? error.message : (error.message || 'Authentication failed'));
+    console.error('AUTH_ERROR', error && error.message ? error.message : error);
     process.stdout.write(JSON.stringify({ success: false, error: message }));
   }
 })();

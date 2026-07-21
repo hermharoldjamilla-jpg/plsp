@@ -1,5 +1,6 @@
 <?php
 session_start();
+set_time_limit(10);
 
 function normalizeLoginType(string $value): string
 {
@@ -31,7 +32,14 @@ function setAuthenticatedSession(string $loginType, array $user, string $email):
 function tryLocalDatabaseLogin(string $loginType, string $email, string $password): ?array
 {
     $adminIdentifier = trim($_POST['teachers_id'] ?? '');
-    mysqli_report(MYSQLI_REPORT_OFF);
+
+    if (function_exists('mysqli_report')) {
+        mysqli_report(MYSQLI_REPORT_OFF);
+    }
+
+    if (!extension_loaded('mysqli')) {
+        return null;
+    }
 
     try {
         $mysqli = @new mysqli('127.0.0.1', 'root', '', 'plsp', 3306);
@@ -108,6 +116,21 @@ function tryDemoLogin(string $loginType, string $email, string $password): ?arra
     return null;
 }
 
+function fallbackToLocalAuth(string $loginType, string $email, string $password): ?array
+{
+    $localUser = tryLocalDatabaseLogin($loginType, $email, $password);
+    if ($localUser !== null) {
+        return $localUser;
+    }
+
+    $demoUser = tryDemoLogin($loginType, $email, $password);
+    if ($demoUser !== null) {
+        return $demoUser;
+    }
+
+    return null;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $login_type = normalizeLoginType($_POST['login_type'] ?? 'student');
     $email = trim($_POST['email'] ?? '');
@@ -118,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    $user = tryLocalDatabaseLogin($login_type, $email, $password);
+    $user = fallbackToLocalAuth($login_type, $email, $password);
 
     if ($user !== null) {
         setAuthenticatedSession($login_type, $user, $email);
@@ -126,28 +149,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    $script = __DIR__ . '/mongo_auth.js';
-    $command = sprintf(
-        'node %s %s %s %s',
-        escapeshellarg($script),
-        escapeshellarg($login_type),
-        escapeshellarg($email),
-        escapeshellarg($password)
-    );
-
-    $output = shell_exec($command);
-    if ($output === null) {
-        header('Location: index.php?error=Unable to run authentication script');
+    require_once __DIR__ . DIRECTORY_SEPARATOR . 'node_helper.php';
+    $result = run_mongo_helper('mongo_auth.js', [$login_type, $email, $password]);
+    if (!$result['success'] || !is_array($result['data'])) {
+        $error = $result['error'] ?? 'Unable to run authentication service.';
+        header('Location: index.php?error=' . rawurlencode($error));
         exit();
     }
 
-    $rawOutput = trim((string) $output);
-    $decoded = json_decode($rawOutput, true);
-    if (!is_array($decoded)) {
-        header('Location: index.php?error=' . rawurlencode('Unable to parse authentication response: ' . $rawOutput));
-        exit();
-    }
-
+    $decoded = $result['data'];
     if (!empty($decoded['success']) && !empty($decoded['user'])) {
         $user = $decoded['user'];
         setAuthenticatedSession($login_type, $user, $email);

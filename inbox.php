@@ -53,23 +53,15 @@ function extractJson($text) {
     return null;
 }
 
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'node_helper.php';
+
 function runMongoRequestsScript($action, $payload = []) {
-    $scriptPath = __DIR__ . DIRECTORY_SEPARATOR . 'mongo_requests.js';
     $jsonPayload = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    $cmd = 'node ' . escapeshellarg($scriptPath) . ' ' . escapeshellarg($action) . ' ' . escapeshellarg($jsonPayload);
-    $output = shell_exec($cmd);
-    if ($output === null) {
-        return ['success' => false, 'error' => 'Unable to execute MongoDB helper script.'];
+    $result = run_mongo_helper('mongo_requests.js', [$action], $jsonPayload);
+    if (!$result['success']) {
+        return ['success' => false, 'error' => $result['error'] ?? 'Unable to execute MongoDB helper script.'];
     }
-    $clean = extractJson(trim($output));
-    if ($clean === null) {
-        return ['success' => false, 'error' => 'Invalid MongoDB helper response: ' . $output];
-    }
-    $result = json_decode($clean, true);
-    if (!is_array($result)) {
-        return ['success' => false, 'error' => 'Invalid JSON from MongoDB helper: ' . $clean];
-    }
-    return $result;
+    return is_array($result['data']) ? $result['data'] : ['success' => false, 'error' => 'Invalid helper output.'];
 }
 
 function getInboxRequests() {
@@ -81,6 +73,55 @@ function getInboxRequests() {
         return ['items' => [], 'error' => 'Unexpected response from MongoDB request helper.'];
     }
     return ['items' => $result, 'error' => null];
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+
+    $requestId = trim($_POST['request_id'] ?? '');
+    $message   = trim($_POST['message'] ?? '');
+    $attachments = [];
+
+    if ($requestId === '') {
+        echo json_encode(['success' => false, 'error' => 'Please open a request before attaching files.']);
+        exit;
+    }
+
+    if (!empty($_FILES['attachments']['name'])) {
+        $uploadDir = __DIR__ . '/uploads/inbox/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $allowed = ['jpg', 'jpeg', 'png', 'pdf', 'docx', 'doc'];
+        foreach ($_FILES['attachments']['name'] as $index => $name) {
+            if (!is_uploaded_file($_FILES['attachments']['tmp_name'][$index])) {
+                continue;
+            }
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            if (!in_array($ext, $allowed, true)) {
+                continue;
+            }
+            if ($_FILES['attachments']['size'][$index] > 8 * 1024 * 1024) {
+                continue;
+            }
+            $safeName = uniqid('inbox_', true) . '_' . preg_replace('/[^A-Za-z0-9._-]+/', '_', basename($name));
+            $dest = $uploadDir . $safeName;
+            if (move_uploaded_file($_FILES['attachments']['tmp_name'][$index], $dest)) {
+                $attachments[] = 'uploads/inbox/' . $safeName;
+            }
+        }
+    }
+
+    $payload = [
+        'id' => $requestId,
+        'message' => $message,
+        'attachments' => $attachments,
+    ];
+
+    $result = runMongoRequestsScript('update', $payload);
+    echo json_encode($result);
+    exit;
 }
 
 $inboxData = getInboxRequests();
@@ -592,12 +633,14 @@ if (!$requestError && !empty($requests)) {
               <div class="reply-tab active">Reply</div>
             </div>
             <textarea class="reply-textarea" placeholder="Type your reply..."></textarea>
+            <div class="reply-attachments" id="replyAttachments" style="display:none; margin-top:10px; padding:10px 12px; background: #f7f7f7; border:1px solid #ddd; border-radius:8px; font-size:13px; color:#333;"></div>
+            <input type="file" id="replyFileInput" style="display:none" multiple accept=".pdf,.jpg,.jpeg,.png,.docx,.doc" />
             <div class="reply-actions">
-              <button class="attach-btn">
+              <button type="button" class="attach-btn">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                 Attach File
               </button>
-              <button class="send-btn">
+              <button type="button" class="send-btn">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                 Send Reply
               </button>
@@ -652,7 +695,11 @@ if (!$requestError && !empty($requests)) {
     bubbleBody.innerHTML = 'Write your request or note here.';
     bubbleAttachment.style.display = 'none';
     attachmentLinks.innerHTML = '';
-    document.querySelector('.reply-textarea').value = '';
+    selectedReplyFiles = [];
+    replyFileInput.value = '';
+    replyAttachments.style.display = 'none';
+    replyAttachments.innerHTML = '';
+    replyTextarea.value = '';
   }
 
   let activeTab = 'all';
@@ -690,6 +737,12 @@ if (!$requestError && !empty($requests)) {
   const bubbleBody = document.getElementById('bubbleBody');
   const bubbleAttachment = document.getElementById('bubbleAttachment');
   const attachmentLinks = document.getElementById('attachmentLinks');
+  const replyFileInput = document.getElementById('replyFileInput');
+  const replyAttachments = document.getElementById('replyAttachments');
+  const attachBtn = document.querySelector('.attach-btn');
+  const sendBtn = document.querySelector('.send-btn');
+  const replyTextarea = document.querySelector('.reply-textarea');
+  let selectedReplyFiles = [];
 
   // Track which item is currently open
   let openItemId = null;
@@ -774,6 +827,106 @@ if (!$requestError && !empty($requests)) {
       activeTab = 'all';
       document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === 'all'));
       applyFilters();
+    });
+  }
+
+  if (attachBtn && replyFileInput) {
+    attachBtn.addEventListener('click', () => {
+      replyFileInput.click();
+    });
+  }
+
+  function renderReplyAttachmentList() {
+    if (!replyAttachments) return;
+    replyAttachments.innerHTML = '';
+    if (!selectedReplyFiles.length) {
+      replyAttachments.style.display = 'none';
+      return;
+    }
+
+    selectedReplyFiles.forEach((file, index) => {
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.justifyContent = 'space-between';
+      row.style.padding = '6px 0';
+      row.style.borderBottom = index < selectedReplyFiles.length - 1 ? '1px solid #e0e0e0' : 'none';
+
+      const nameEl = document.createElement('span');
+      nameEl.textContent = file.name;
+      nameEl.style.flex = '1';
+      nameEl.style.marginRight = '12px';
+      nameEl.style.overflow = 'hidden';
+      nameEl.style.textOverflow = 'ellipsis';
+      nameEl.style.whiteSpace = 'nowrap';
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Remove';
+      removeBtn.style.border = 'none';
+      removeBtn.style.background = 'transparent';
+      removeBtn.style.color = '#d64545';
+      removeBtn.style.cursor = 'pointer';
+      removeBtn.style.fontSize = '12px';
+      removeBtn.addEventListener('click', () => {
+        selectedReplyFiles.splice(index, 1);
+        const dataTransfer = new DataTransfer();
+        selectedReplyFiles.forEach(f => dataTransfer.items.add(f));
+        replyFileInput.files = dataTransfer.files;
+        renderReplyAttachmentList();
+      });
+
+      row.appendChild(nameEl);
+      row.appendChild(removeBtn);
+      replyAttachments.appendChild(row);
+    });
+    replyAttachments.style.display = 'block';
+  }
+
+  if (replyFileInput) {
+    replyFileInput.addEventListener('change', () => {
+      selectedReplyFiles = Array.from(replyFileInput.files || []);
+      renderReplyAttachmentList();
+    });
+  }
+
+  if (sendBtn) {
+    sendBtn.addEventListener('click', async () => {
+      const message = replyTextarea.value.trim();
+      if (!message && selectedReplyFiles.length === 0) {
+        alert('Please type a reply or attach a file.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('message', message);
+      formData.append('request_id', openItemId || '');
+      selectedReplyFiles.forEach((file, index) => {
+        formData.append('attachments[]', file);
+      });
+
+      // Replace this URL with the actual inbox reply endpoint if available
+      try {
+        const res = await fetch('inbox.php', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.success === false) {
+          alert(data.error || 'Failed to send reply.');
+          return;
+        }
+
+        alert('Reply sent successfully.');
+        replyTextarea.value = '';
+        selectedReplyFiles = [];
+        replyFileInput.value = '';
+        renderReplyAttachmentList();
+      } catch (err) {
+        console.error(err);
+        alert('Unable to send reply. Please try again later.');
+      }
     });
   }
 

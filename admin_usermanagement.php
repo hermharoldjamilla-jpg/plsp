@@ -8,58 +8,7 @@ $departments = [
 
 $action_msg = "";
 
-function locateNodeExecutable(): string {
-  $nodePath = getenv('NODE_PATH') ?: '';
-  if ($nodePath) {
-    return $nodePath;
-  }
-
-  if (stripos(PHP_OS_FAMILY, 'Windows') === 0) {
-    $whereNode = @shell_exec('where node 2>&1');
-    if ($whereNode) {
-      $paths = preg_split('/[\r\n]+/', trim($whereNode));
-      return $paths[0] ?: 'node';
-    }
-  } else {
-    $whichNode = @shell_exec('command -v node 2>&1');
-    if ($whichNode) {
-      return trim($whichNode);
-    }
-  }
-
-  return 'node';
-}
-
-function runNodeHelper(array $args): array {
-  $cwd = __DIR__;
-  $node = locateNodeExecutable();
-  $command = implode(' ', array_map('escapeshellarg', array_merge([$node], $args)));
-
-  $descriptorSpec = [
-    ["pipe", "r"],
-    ["pipe", "w"],
-    ["pipe", "w"],
-  ];
-
-  $process = @proc_open($command, $descriptorSpec, $pipes, $cwd);
-  if (!is_resource($process)) {
-    return ['success' => false, 'error' => 'Unable to start helper process.'];
-  }
-
-  if (is_resource($pipes[0])) { fclose($pipes[0]); }
-  $stdout = is_resource($pipes[1]) ? stream_get_contents($pipes[1]) : '';
-  $stderr = is_resource($pipes[2]) ? stream_get_contents($pipes[2]) : '';
-  if (is_resource($pipes[1])) { fclose($pipes[1]); }
-  if (is_resource($pipes[2])) { fclose($pipes[2]); }
-
-  $exitCode = proc_close($process);
-  if ($exitCode !== 0) {
-    $error = trim($stderr ?: "Exit code $exitCode");
-    return ['success' => false, 'error' => $error, 'stdout' => trim($stdout)];
-  }
-
-  return ['success' => true, 'output' => $stdout, 'error' => trim($stderr)];
-}
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'node_helper.php';
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $action = $_POST["action"] ?? "";
@@ -68,7 +17,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $username = htmlspecialchars($_POST["username"] ?? "");
     $email    = htmlspecialchars($_POST["email"] ?? "");
     $password = password_hash($_POST["password"] ?? '', PASSWORD_DEFAULT);
-    $scriptPath = __DIR__ . DIRECTORY_SEPARATOR . 'mongo_admin.js';
     $payload = json_encode([
       'dept' => $dept,
       'username' => $username,
@@ -76,11 +24,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       'password' => $password,
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-    $helperResult = runNodeHelper(['node', $scriptPath, 'create', $payload]);
+    $helperResult = run_mongo_helper('mongo_admin.js', ['create'], $payload);
     if (!$helperResult['success']) {
       $action_msg = '⚠️ Unable to create user: ' . ($helperResult['error'] ?? 'helper execution failed.');
     } else {
-      $result = json_decode(trim($helperResult['output']), true);
+      $result = $helperResult['data'];
       if (isset($result['success']) && $result['success'] === true) {
         $action_msg = "✅ User '$username' added to $dept.";
       } else {

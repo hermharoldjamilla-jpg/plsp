@@ -6,26 +6,21 @@ if (!isset($_SESSION['student_id'])) {
     exit();
 }
 
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'node_helper.php';
+
 function fetchStudentProfileFromMongo(string $identifier): array {
-    $script = __DIR__ . '/mongo_students.js';
-    $command = sprintf(
-        'node %s %s %s',
-        escapeshellarg($script),
-        escapeshellarg('All'),
-        escapeshellarg($identifier)
-    );
-
-    $output = shell_exec($command);
-    if (!is_string($output) || trim($output) === '') {
+    $result = run_mongo_helper('mongo_students.js', ['All', $identifier]);
+    if (!$result['success'] || !is_array($result['data'])) {
+        error_log('stud_dash mongo_students helper failed: ' . ($result['error'] ?? 'unknown error'));
         return [];
     }
 
-    $decoded = json_decode(trim($output), true);
-    if (!is_array($decoded) || empty($decoded) || !isset($decoded[0])) {
+    $data = $result['data'];
+    if (empty($data) || !isset($data[0]) || !is_array($data[0])) {
         return [];
     }
 
-    return $decoded[0];
+    return $data[0];
 }
 
 $student_name = trim($_SESSION['student_name'] ?? 'Student');

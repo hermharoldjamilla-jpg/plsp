@@ -11,6 +11,15 @@ const PORT = 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+// Serve uploaded files (make uploads/ accessible at /uploads)
+const uploadsPath = path.join(__dirname, 'uploads');
+app.use('/uploads', express.static(uploadsPath, {
+  index: false,
+  cacheControl: true,
+  setHeaders: (res, path) => {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+}));
 
 // MongoDB connection (optional for now)
 const dbURI = process.env.MONGO_URI || 'mongodb+srv://kaiselnotokay_db_user:kaiselnotokay_db_user@cluster0.ltydj0a.mongodb.net/myDatabase?retryWrites=true&w=majority';

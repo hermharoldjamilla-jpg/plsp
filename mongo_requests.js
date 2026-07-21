@@ -7,6 +7,26 @@ const action = process.argv[2] || 'fetch';
 let payload = {};
 const rawPayload = process.argv[3] || '';
 
+const RETRY_COUNT = 1;
+const RETRY_DELAY_MS = 500;
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+function isTlsError(message) {
+  return /SSL routines|tlsv1|tls|handshake|MongoServerSelectionError|serverSelection|ECONNRESET|ECONNREFUSED|ENOTFOUND|timed out/i.test(message || '');
+}
+async function connectWithRetry(client, retries = RETRY_COUNT) {
+  try {
+    return await client.connect();
+  } catch (error) {
+    if (retries > 0 && isTlsError(error.message)) {
+      await sleep(RETRY_DELAY_MS);
+      return connectWithRetry(client, retries - 1);
+    }
+    throw error;
+  }
+}
+
 function parsePayload(raw) {
   if (!raw) return {};
   try {
@@ -56,14 +76,15 @@ async function main() {
   }
 
   const client = new MongoClient(uri, {
-    serverSelectionTimeoutMS: 5000,
-    connectTimeoutMS: 5000,
-    socketTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
+    socketTimeoutMS: 10000,
     maxPoolSize: 5,
+    tls: true,
   });
 
   try {
-    await client.connect();
+    await connectWithRetry(client);
     const db = client.db(dbName);
     const collection = db.collection(collectionName);
 
@@ -117,6 +138,45 @@ async function main() {
 
       const result = await collection.insertOne(doc);
       process.stdout.write(JSON.stringify({ success: true, id: result.insertedId.toString() }));
+      return;
+    }
+
+    if (action === 'update') {
+      const id = payload.id;
+      if (!ObjectId.isValid(id)) {
+        process.stdout.write(JSON.stringify({ success: false, error: 'Invalid request id.' }));
+        return;
+      }
+
+      const updateDoc = {};
+      if (payload.message) {
+        updateDoc.admin_remarks = payload.message;
+      }
+      const attachments = Array.isArray(payload.attachments) ? payload.attachments : payload.attachments ? [payload.attachments] : [];
+      if (attachments.length > 0) {
+        updateDoc.attachments = attachments;
+      }
+
+      if (Object.keys(updateDoc).length === 0) {
+        process.stdout.write(JSON.stringify({ success: false, error: 'No update payload provided.' }));
+        return;
+      }
+
+      const update = { $set: {} };
+      if (updateDoc.admin_remarks !== undefined) {
+        update.$set.admin_remarks = updateDoc.admin_remarks;
+      }
+      if (updateDoc.attachments) {
+        update.$push = { attachments: { $each: updateDoc.attachments } };
+      }
+
+      const result = await collection.updateOne({ _id: new ObjectId(id) }, update);
+      if (result.matchedCount === 0) {
+        process.stdout.write(JSON.stringify({ success: false, error: 'Request not found.' }));
+        return;
+      }
+
+      process.stdout.write(JSON.stringify({ success: true }));
       return;
     }
 

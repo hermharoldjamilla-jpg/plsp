@@ -1,141 +1,4 @@
-<?php
-error_reporting(E_ALL);
-ini_set('display_errors', '0');
-ini_set('display_startup_errors', '0');
-ob_start();
-
-class DisabledPDOResult {
-    public function fetchAll($mode = null) { return []; }
-    public function fetchColumn() { return 0; }
-    public function fetch($mode = null) { return false; }
-}
-
-class DisabledPDOStatement {
-    public function execute($params = []) { return true; }
-    public function fetchAll($mode = null) { return []; }
-    public function fetchColumn() { return 0; }
-    public function fetch($mode = null) { return false; }
-}
-
-class DisabledPDO {
-    public function exec($sql) { return 0; }
-    public function query($sql) { return new DisabledPDOResult(); }
-    public function prepare($sql) { return new DisabledPDOStatement(); }
-    public function lastInsertId() { return null; }
-    public function setAttribute($attribute, $value) { return true; }
-}
-
-session_start();
-$pdo = new DisabledPDO();
-require_once __DIR__ . DIRECTORY_SEPARATOR . 'node_helper.php';
-
-function getCurrentPosterRole() {
-    if (isset($_SESSION['admin_id'])) {
-        return 'Admin';
-    }
-    if (isset($_SESSION['student_id'])) {
-        return 'Student';
-    }
-    return 'Guest';
-}
-
-function extractJson($text) {
-    $candidates = [];
-
-    if (preg_match_all('/(\{[\s\S]*?\})/', $text, $matches)) {
-        foreach ($matches[1] as $match) {
-            $candidates[] = $match;
-        }
-    }
-    if (preg_match_all('/(\[[\s\S]*?\])/', $text, $matches)) {
-        foreach ($matches[1] as $match) {
-            $candidates[] = $match;
-        }
-    }
-
-    foreach (array_reverse($candidates) as $candidate) {
-        $decoded = json_decode($candidate, true);
-        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-            return $candidate;
-        }
-    }
-
-    return null;
-}
-
-function runMongoAnnouncementsScript($action, $payload = []) {
-    $jsonPayload = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    $result = run_mongo_helper('mongo_announcements.js', [$action], $jsonPayload);
-    if (!$result['success']) {
-        return ['success' => false, 'error' => $result['error'] ?? 'Unable to execute MongoDB helper script.'];
-    }
-    return is_array($result['data']) ? $result['data'] : ['success' => false, 'error' => 'Invalid helper output.'];
-}
-
-// ── AJAX: Delete / Create ─────────────────────────────────────────────────────
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    header('Content-Type: application/json');
-
-    if ($_POST['action'] === 'delete') {
-        $id = trim($_POST['id'] ?? '');
-        $result = runMongoAnnouncementsScript('delete', ['id' => $id]);
-        echo json_encode($result);
-        exit;
-    }
-
-    if ($_POST['action'] === 'create') {
-        $title       = trim($_POST['title'] ?? '');
-        $description = trim($_POST['description'] ?? '');
-        $posted_by   = getCurrentPosterRole();
-        $attachment  = null;
-
-        if (!empty($_FILES['attachment']['name'])) {
-          $uploadDir = 'uploads/';
-          if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-          $original = basename($_FILES['attachment']['name']);
-          $ext      = strtolower(pathinfo($original, PATHINFO_EXTENSION));
-          $allowed  = ['jpg','jpeg','png','pdf','docx','doc'];
-          if (in_array($ext, $allowed) && $_FILES['attachment']['size'] <= 5 * 1024 * 1024) {
-            // sanitize filename: replace whitespace and unsafe chars with underscore
-            $safe = preg_replace('/[^A-Za-z0-9._-]/', '_', $original);
-            $filename = uniqid() . '_' . $safe;
-            move_uploaded_file($_FILES['attachment']['tmp_name'], $uploadDir . $filename);
-            $attachment = $filename;
-          }
-        }
-
-        $result = runMongoAnnouncementsScript('create', [
-            'title'       => $title,
-            'description' => $description,
-            'posted_by'   => $posted_by,
-            'attachment'  => $attachment,
-        ]);
-        echo json_encode($result);
-        exit;
-    }
-}
-
-// ── AJAX: Fetch list ──────────────────────────────────────────────────────────
-if (isset($_GET['ajax'])) {
-    header('Content-Type: application/json');
-    header('Cache-Control: no-cache, no-store, must-revalidate');
-    header('Pragma: no-cache');
-    header('Expires: 0');
-    $search = trim($_GET['search'] ?? '');
-
-    $result = runMongoAnnouncementsScript('fetch', [
-        'search' => $search,
-    ]);
-
-    if (is_array($result) && array_key_exists('success', $result)) {
-        echo json_encode(['error' => $result['error'] ?? 'Unknown error']);
-    } else {
-        echo json_encode($result);
-    }
-    exit;
-}
-?>
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
@@ -726,15 +589,12 @@ function esc(s) {
 function urlForAttachment(name) {
   if (!name) return '';
   try {
-    let n = String(name).trim();
+    const n = String(name);
     if (/^https?:\/\//i.test(n)) return n;
-    // if a full path like 'uploads/filename' was stored, strip the prefix
-    n = n.replace(/^uploads\//i, '');
-    // sanitize common whitespace/unsafe chars to match filesystem renaming
-    const safe = n.replace(/\s+/g, '_');
-    return 'uploads/' + encodeURIComponent(safe);
+    if (n.indexOf('/') !== -1) return encodeURI(n);
+    return 'uploads/' + encodeURIComponent(n);
   } catch (err) {
-    return 'uploads/' + encodeURIComponent(String(name).replace(/\s+/g, '_'));
+    return 'uploads/' + encodeURIComponent(String(name));
   }
 }
 
@@ -794,48 +654,31 @@ async function loadAnnouncements() {
     setTimeout(() => {
       document.querySelectorAll('.card-image img').forEach(img => {
         img.addEventListener('error', () => {
-          (async () => {
+          try {
+            const src = img.getAttribute('src') || img.src || '';
+            const url = new URL(src, location.href);
+            // 1) try decodeURIComponent on path
             try {
-              const orig = img.getAttribute('src') || img.src || '';
-              const baseUrl = new URL(orig, location.href);
-              const pathPart = baseUrl.pathname || '';
-              const candidates = new Set();
-              // original
-              candidates.add(baseUrl.toString());
-              // decoded path
-              try { const decoded = decodeURIComponent(pathPart); candidates.add(new URL(decoded, baseUrl.origin).toString()); } catch (e) {}
-              // replace spaces with underscores (decoded and original)
-              try { const u1 = pathPart.replace(/\s+/g, '_'); candidates.add(new URL(u1, baseUrl.origin).toString()); } catch (e) {}
-              try { const decoded = decodeURIComponent(pathPart); const u2 = decoded.replace(/\s+/g, '_'); candidates.add(new URL(u2, baseUrl.origin).toString()); } catch (e) {}
-              // fallback using uploads/ + filename when filename present
-              try {
-                const parts = pathPart.split('/');
-                const filename = parts.pop();
-                if (filename) {
-                  candidates.add(new URL('uploads/' + encodeURIComponent(filename), baseUrl.origin).toString());
-                  candidates.add(new URL('uploads/' + filename.replace(/\s+/g, '_'), baseUrl.origin).toString());
-                }
-              } catch (e) {}
-
-              for (const c of candidates) {
-                try {
-                  const r = await fetch(c, { method: 'HEAD' });
-                  if (!r.ok) continue;
-                  const ct = r.headers.get('content-type') || '';
-                  if (!ct.startsWith('image/')) continue;
-                  img.src = c;
-                  return;
-                } catch (err) {
-                  // try next
-                }
+              const decodedPath = decodeURIComponent(url.pathname);
+              if (decodedPath !== url.pathname) {
+                url.pathname = decodedPath;
+                img.src = url.toString();
+                return;
               }
-            } catch (e) {
-              // ignore
+            } catch (e) {}
+            // 2) try replace spaces with underscores (common sanitization)
+            const underscored = url.pathname.replace(/\s+/g, '_');
+            if (underscored !== url.pathname) {
+              url.pathname = underscored;
+              img.src = url.toString();
+              return;
             }
-            img.style.opacity = '.35';
-            img.style.filter = 'grayscale(1)';
-            img.title = 'Image failed to load';
-          })();
+          } catch (e) {
+            // ignore
+          }
+          img.style.opacity = '.35';
+          img.style.filter = 'grayscale(1)';
+          img.title = 'Image failed to load';
         }, { once: true });
       });
     }, 40);

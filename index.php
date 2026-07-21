@@ -222,11 +222,11 @@ body {
     </div>
   <?php endif; ?>
 
-  <form action="process_login.php" method="POST">
+  <form action="process_login.php" method="POST" autocomplete="on">
     <input type="hidden" name="login_type" id="loginType" value="student">
 
     <div class="form-group">
-      <label class="input-label" id="emailLabel">Email / Student No.</label>
+      <label class="input-label" for="emailInput" id="emailLabel">Email / Student No.</label>
       <div class="input-wrap">
         <svg class="icon-left" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
         <input type="text" id="emailInput" name="email" placeholder="Enter Email or Student ID" autocomplete="username" required>
@@ -234,19 +234,19 @@ body {
     </div>
 
     <div class="admin-field" id="adminField">
-      <label class="input-label">Teacher ID</label>
+      <label class="input-label" for="teachersIdInput">Teacher ID</label>
       <div class="input-wrap">
         <svg class="icon-left" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <input type="text" name="teachers_id" placeholder="Enter teachers_id" autocomplete="username">
+        <input type="text" id="teachersIdInput" name="teachers_id" placeholder="Enter teachers_id" autocomplete="username">
       </div>
     </div>
 
     <div class="form-group">
-      <label class="input-label">Password</label>
+      <label class="input-label" for="pwInput">Password</label>
       <div class="input-wrap">
         <svg class="icon-left" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         <input type="password" id="pwInput" name="password" placeholder="Enter Your Password" required autocomplete="current-password">
-        <button class="toggle-pw" type="button" onclick="togglePw()" aria-label="Toggle password">
+        <button class="toggle-pw" type="button" onclick="togglePw()" aria-label="Toggle password visibility">
           <svg id="eyeIcon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
       </div>
@@ -275,29 +275,27 @@ body {
 
     <div class="sec-title">Personal Information</div>
     <div class="reg-row cols3">
-      <div class="reg-field"><label>First Name</label><input type="text" placeholder="Enter First Name"></div>
-      <div class="reg-field"><label>Middle Name</label><input type="text" placeholder="Enter Middle Name"></div>
-      <div class="reg-field"><label>Last Name</label><input type="text" placeholder="Enter Last Name"></div>
+      <div class="reg-field"><label for="NameInput">Full Name</label><input id="NameInput" name="name" type="text" placeholder="Enter Full Name" autocomplete="given-name"></div>
     </div>
     <div class="reg-row cols2">
-      <div class="reg-field"><label>Student ID Number</label><input type="text" placeholder="Enter Your Student Number"></div>
-      <div class="reg-field"><label>Date of Birth</label><input type="text" placeholder="mm/dd/yyyy"></div>
+      <div class="reg-field"><label for="studentIdInput">Student ID Number</label><input id="studentIdInput" name="student_id" type="text" placeholder="Enter Your Student Number" autocomplete="username"></div>
+      <div class="reg-field"><label for="dobInput">Date of Birth</label><input id="dobInput" name="dob" type="text" placeholder="mm/dd/yyyy" autocomplete="bday"></div>
     </div>
     <div class="reg-row cols2">
-      <div class="reg-field"><label>Email Address</label><input type="email" name="email" placeholder="******@gmail.com"></div>
-      <div class="reg-field"><label>Mobile Number</label><input type="text" name="mobile" placeholder="09XXXXXXXXXX"></div>
+      <div class="reg-field"><label for="regEmailInput">Email Address</label><input id="regEmailInput" type="email" name="email" placeholder="******@gmail.com" autocomplete="email"></div>
+      <div class="reg-field"><label for="mobileInput">Mobile Number</label><input id="mobileInput" type="text" name="mobile" placeholder="09XXXXXXXXXX" autocomplete="tel"></div>
     </div>
     <div class="reg-row cols2">
       <div class="reg-field">
         <label>Sex</label>
         <div class="radio-row">
-          <label class="radio-option"><input type="radio" name="sex" value="Male"> Male</label>
-          <label class="radio-option"><input type="radio" name="sex" value="Female"> Female</label>
+          <label class="radio-option"><input type="radio" name="sex" value="Male" autocomplete="sex"> Male</label>
+          <label class="radio-option"><input type="radio" name="sex" value="Female" autocomplete="sex"> Female</label>
         </div>
       </div>
       <div class="reg-field">
-        <label>Blood Type</label>
-        <select name="blood_type">
+        <label for="bloodTypeSelect">Blood Type</label>
+        <select id="bloodTypeSelect" name="blood_type">
           <option value="" disabled selected>Select Blood Type</option>
           <option value="A+">A+</option><option value="A-">A-</option>
           <option value="B+">B+</option><option value="B-">B-</option>
@@ -309,25 +307,25 @@ body {
 
     <div class="sec-title">Emergency Contact</div>
     <div class="reg-row cols2">
-      <div class="reg-field"><label>Emergency Contact Person</label><input type="text" name="emergency_person" placeholder="Emergency Contact Person"></div>
-      <div class="reg-field"><label>Emergency Contact Number</label><input type="text" name="emergency_number" placeholder="Emergency Contact Number"></div>
+      <div class="reg-field"><label for="emergencyPersonInput">Emergency Contact Person</label><input id="emergencyPersonInput" type="text" name="emergency_person" placeholder="Emergency Contact Person" autocomplete="name"></div>
+      <div class="reg-field"><label for="emergencyNumberInput">Emergency Contact Number</label><input id="emergencyNumberInput" type="text" name="emergency_number" placeholder="Emergency Contact Number" autocomplete="tel"></div>
     </div>
     <div class="reg-row cols2">
-      <div class="reg-field"><label>Emergency Contact Name</label><input type="text" name="emergency_name" placeholder="Emergency Contact Name"></div>
-      <div class="reg-field"><label>Relationship</label><input type="text" name="emergency_relationship" placeholder="Relationship"></div>
+      <div class="reg-field"><label for="emergencyNameInput">Emergency Contact Name</label><input id="emergencyNameInput" type="text" name="emergency_name" placeholder="Emergency Contact Name" autocomplete="name"></div>
+      <div class="reg-field"><label for="emergencyRelationshipInput">Relationship</label><input id="emergencyRelationshipInput" type="text" name="emergency_relationship" placeholder="Relationship" autocomplete="relationship"></div>
     </div>
 
     <div class="sec-title">Academic Information</div>
     <div class="reg-row cols3">
       <div class="reg-field">
-        <label>Course</label>
-        <select><option value="" disabled selected>Course</option><option>BSIT</option><option>BSCS</option><option>BSED</option><option>BSN</option><option>BSBA</option></select>
+        <label for="courseSelect">Course</label>
+        <select id="courseSelect" name="course"><option value="" disabled selected>Course</option><option>BSIT</option><option>BSCS</option><option>BSED</option><option>BSN</option><option>BSBA</option></select>
       </div>
       <div class="reg-field">
-        <label>Year Level</label>
-        <select><option value="" disabled selected>Year Level</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select>
+        <label for="yearLevelSelect">Year Level</label>
+        <select id="yearLevelSelect" name="year_level"><option value="" disabled selected>Year Level</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select>
       </div>
-      <div class="reg-field"><label>Section</label><input type="text" placeholder="Section"></div>
+      <div class="reg-field"><label for="sectionInput">Section</label><input id="sectionInput" name="section" type="text" placeholder="Section"></div>
     </div>
 
     <div class="sec-title">Student Type / Circumstance</div>
@@ -341,8 +339,8 @@ body {
 
     <div class="sec-title">Account Information</div>
     <div class="reg-row cols2">
-      <div class="reg-field"><label>Password</label><input type="password" name="password" placeholder="Password" autocomplete="new-password"></div>
-      <div class="reg-field"><label>Confirm Password</label><input type="password" name="confirm_password" placeholder="Confirm Password" autocomplete="new-password"></div>
+      <div class="reg-field"><label for="regPasswordInput">Password</label><input id="regPasswordInput" type="password" name="password" placeholder="Password" autocomplete="new-password"></div>
+      <div class="reg-field"><label for="confirmPasswordInput">Confirm Password</label><input id="confirmPasswordInput" type="password" name="confirm_password" placeholder="Confirm Password" autocomplete="new-password"></div>
     </div>
 
     <div class="privacy-box">
